@@ -1,0 +1,34 @@
+name: Deploy sin Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar vía SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}     # IP de tu servidor
+          username: ${{ secrets.SERVER_USER }} # Usuario (ej: root o ubuntu)
+          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Tu llave privada SSH
+          script: |
+            cd /www/emergentesdj
+            git pull origin main
+            
+            # --- Actualizar Backend ---
+            cd api-server-django
+            source venv/bin/activate
+            pip install -r requirements.txt
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput
+            sudo systemctl restart gunicorn
+            
+            # --- Actualizar Frontend ---
+            cd ../react-ui-vite
+            npm install
+            npm run build
+            # Nginx ya debería estar apuntando a esta carpeta build
