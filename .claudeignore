@@ -1,0 +1,43 @@
+# Versiones de control
+.git/
+
+# Node.js / React (Frontend)
+react-ui-vite/node_modules/
+react-ui-vite/build/
+react-ui-vite/dist/
+.npm/
+
+# Python / Django (Backend)
+api-server-django/venv/
+api-server-django/venv42/
+api-server-django/__pycache__/
+**/*.py[cod]
+**/*$py.class
+api-server-django/db.sqlite3
+api-server-django/media/
+api-server-django/course_images/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Scripts de debug, logs y tests ad-hoc en el backend
+api-server-django/debug_*.py
+api-server-django/reproduce_*.py
+api-server-django/*output*.txt
+api-server-django/error*.txt
+api-server-django/check_*.txt
+*.log
+
+# Variables de entorno
+**/.env
+**/.env.*
+!**/.env.sample
+!**/.env_sample_local
+!api-server-django/env.sample
+!react-ui-vite/.env.sample
+
+# Archivos del Sistema Operativo y Editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

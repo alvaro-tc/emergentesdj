@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(\"/c/Users/alvar/Documents/GitHub/sigeldyw/api-server-django/venv/Scripts/python.exe\" --version)",
+      "Read(//c/Users/alvar/AppData/Local/Programs/Python/**)",
+      "Bash(py -0)",
+      "Bash(py -3.12 -m venv venv42)",
+      "Bash(npm --version)",
+      "Bash(nvm use:*)",
+      "Bash(fnm use:*)",
+      "Bash(where node:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm view:*)",
+      "Bash(python3 -c \"import sys,json; v=json.load\\(sys.stdin\\); print\\([x for x in v if x.startswith\\('5'\\)][-3:]\\)\")",
+      "Bash(powershell -Command 'Get-PSDrive C | Select-Object Used,Free | ForEach-Object { '\\\\''Used: '\\\\'' + [math]::Round\\($_.Used/1GB,1\\) + '\\\\'' GB  Free: '\\\\'' + [math]::Round\\($_.Free/1GB,1\\) + '\\\\'' GB'\\\\'' }')",
+      "Bash(npx vite:*)",
+      "Bash(node -e \"const p = require\\('/c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/node_modules/@vitejs/plugin-react/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(python3 -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\(p['version'], p.get\\('peerDependencies',{}\\)\\)\")",
+      "Bash(find /c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/src -name '*.jsx' -exec sed -i -e 's|@material-ui/core|@mui/material|g' -e 's|@material-ui/icons|@mui/icons-material|g' -e 's|@material-ui/lab|@mui/lab|g' -e 's|@material-ui/styles|@mui/material/styles|g' '{}' ';')",
+      "Bash(echo \"Restantes: $\\(grep -r \"@material-ui\" \"/c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/src\" --include=\"*.jsx\")",
+      "Bash(find /c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/src -name '*.jsx' -exec sed -i 's|@tabler/icons|@tabler/icons-react|g' '{}' ';')",
+      "Bash(echo \"---count: $\\(grep -r \"makeStyles\" \"/c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/src\" --include=\"*.jsx\" -l)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(echo \"XDATAGRID_USES: $?\")",
+      "Bash(npm uninstall:*)",
+      "Bash(grep -i alert echo \"---\")",
+      "Bash(npm run:*)",
+      "Bash(grep -v \"^.*:\\\\s*//\")",
+      "Bash(git -C /c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite log --oneline)",
+      "Bash(git -C /c/Users/alvar/Documents/GitHub/sigeldyw log --oneline)",
+      "Bash(ls -la /c/Users/alvar/Documents/GitHub/sigeldyw/react-ui-vite/.env*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000/api/)",
+      "Bash(curl -s http://localhost:5000/api/courses/ -H \"Authorization: Token testtoken\")",
+      "Bash(curl -s -X POST http://localhost:5000/api/login/ -H \"Content-Type: application/json\" -d '{\"email\":\"admin@test.com\",\"password\":\"wrong\"}')",
+      "Bash(curl:*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if any\\(x in k for x in ['tabler','lab','styles','mui']\\)]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if any\\(x in k for x in ['scrollbar','formik','yup','axios','moment','clsx','popstate']\\)]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if 'popup' in k or 'popstate' in k or 'material-ui' in k]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if 'device' in k or 'apexchart' in k]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if 'framer' in k or 'motion' in k]\")",
+      "Bash(grep -oP \"API_SERVER \\\\+ ['\\\\\"\\\\`][^'\\\\\"\\\\`]*\")",
+      "Bash(grep -oP \"\\\\`\\\\$\\\\{configData\\\\.API_SERVER\\\\}[^'\\\\\"\\\\`]*\")",
+      "Bash(grep -oE \"\\(get|post|put|patch|delete\\)\\\\\\(['\\\\`][^\\\\\\)]*\")"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}
