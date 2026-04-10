@@ -48,8 +48,8 @@ const StudentTaskModal = ({ open, onClose, courseId, subCriterionId, studentRow 
                     const allTasks = res.data.tasks;
                     const allRows = res.data.rows;
                     
-                    // Solo mostramos tareas publicas
-                    setTasks(allTasks.filter(t => t.is_public));
+                    // Mostrar todas las tareas (publicas y no publicas)
+                    setTasks(allTasks);
                     
                     const singleRow = allRows.find(r => r.enrollment_id === studentRow.enrollment_id);
                     if (singleRow) {

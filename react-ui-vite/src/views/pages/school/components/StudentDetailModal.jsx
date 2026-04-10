@@ -20,7 +20,7 @@ import {
     useMediaQuery,
     useTheme
 } from '@mui/material';
-import { IconChevronDown, IconEye, IconNotebook } from '@tabler/icons-react';
+import { IconChevronDown, IconEye, IconNotebook, IconLock, IconLockOpen } from '@tabler/icons-react';
 import StudentTaskModal from './StudentTaskModal';
 
 const GROUP_COLORS = [
@@ -77,9 +77,11 @@ const StudentDetailModal = ({
     const [localGrades, setLocalGrades] = useState({});
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [taskModalSubCritId, setTaskModalSubCritId] = useState(null);
+    const [editingEnabled, setEditingEnabled] = useState(false);
 
     useEffect(() => {
         if (studentRow) setLocalGrades({ ...(studentRow.grades || {}) });
+        setEditingEnabled(false);
     }, [studentRow?.enrollment_id, open]);
 
     if (!studentRow) return null;
@@ -132,29 +134,50 @@ const StudentDetailModal = ({
                 )}
 
                 <DialogTitle component="div" sx={{ pt: isMobile ? 1 : 2, pb: 1.5, px: 2.5 }}>
-                    <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3} noWrap>
-                        {fullName}
-                    </Typography>
-                    <Box sx={{ mt: 0.75, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Chip
-                            label={studentRow.ci}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontWeight: 600, fontSize: '0.75rem', height: 22 }}
-                        />
-                        <Chip
-                            label={finalGrade !== '-' ? `${finalGrade} pts` : 'Sin nota'}
-                            size="small"
-                            sx={{
-                                height: 22,
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                ...(finalGrade !== '-'
-                                    ? { backgroundColor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }
-                                    : { backgroundColor: '#f5f5f5', color: '#9e9e9e' }
-                                )
-                            }}
-                        />
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3} noWrap>
+                                {fullName}
+                            </Typography>
+                            <Box sx={{ mt: 0.75, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <Chip
+                                    label={studentRow.ci}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ fontWeight: 600, fontSize: '0.75rem', height: 22 }}
+                                />
+                                <Chip
+                                    label={finalGrade !== '-' ? `${finalGrade} pts` : 'Sin nota'}
+                                    size="small"
+                                    sx={{
+                                        height: 22,
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        ...(finalGrade !== '-'
+                                            ? { backgroundColor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }
+                                            : { backgroundColor: '#f5f5f5', color: '#9e9e9e' }
+                                        )
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+                        <Tooltip title={editingEnabled ? 'Deshabilitar edición' : 'Habilitar edición'}>
+                            <IconButton
+                                size="small"
+                                onClick={() => setEditingEnabled(prev => !prev)}
+                                sx={{
+                                    ml: 1,
+                                    mt: 0.25,
+                                    color: editingEnabled ? 'primary.main' : 'text.disabled',
+                                    border: '1px solid',
+                                    borderColor: editingEnabled ? 'primary.main' : 'divider',
+                                    borderRadius: 1.5,
+                                    p: '4px',
+                                }}
+                            >
+                                {editingEnabled ? <IconLockOpen size="1rem" /> : <IconLock size="1rem" />}
+                            </IconButton>
+                        </Tooltip>
                     </Box>
                 </DialogTitle>
 
@@ -250,7 +273,7 @@ const StudentDetailModal = ({
                                                                         </IconButton>
                                                                     </Tooltip>
                                                                 </>
-                                                            ) : sub.editable ? (
+                                                            ) : sub.editable && editingEnabled ? (
                                                                 <TextField
                                                                     type="number"
                                                                     value={localGrades[sub.id] ?? ''}
@@ -303,7 +326,7 @@ const StudentDetailModal = ({
                                                                         </IconButton>
                                                                     </Tooltip>
                                                                 </>
-                                                            ) : (
+                                                            ) : editingEnabled ? (
                                                                 <TextField
                                                                     type="number"
                                                                     value={localGrades[spec.id] ?? ''}
@@ -316,6 +339,11 @@ const StudentDetailModal = ({
                                                                         style: { textAlign: 'center', padding: '4px 6px', fontSize: '0.85rem', color: '#e65100' }
                                                                     }}
                                                                 />
+                                                            ) : (
+                                                                <Typography variant="body2" fontWeight={700} sx={{ color: '#e65100', minWidth: 36, textAlign: 'right' }}>
+                                                                    {localGrades[spec.id] !== undefined && localGrades[spec.id] !== null && localGrades[spec.id] !== ''
+                                                                        ? `+${parseFloat(localGrades[spec.id]).toFixed(2)}` : '-'}
+                                                                </Typography>
                                                             )}
                                                         </Box>
                                                     </ListItem>
