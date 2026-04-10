@@ -24,15 +24,16 @@ import {
     DialogContent,
     useMediaQuery,
     useTheme,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    ListItem,
-    ListItemText,
-    List
+    Box,
+    Card,
+    CardActionArea,
+    Chip,
+    SpeedDial,
+    SpeedDialAction,
+    SpeedDialIcon
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
-import { IconSearch, IconDeviceFloppy, IconSettings, IconEye, IconNotebook, IconDownload, IconChevronDown } from '@tabler/icons-react';
+import { IconSearch, IconDeviceFloppy, IconSettings, IconEye, IconNotebook, IconDownload, IconChevronDown, IconDotsVertical } from '@tabler/icons-react';
 import MainCard from './../../../ui-component/cards/MainCard';
 import axios from 'axios';
 import configData from '../../../config';
@@ -577,7 +578,10 @@ const Grades = () => {
     const maternoLeft = 140; // width of paterno
 
     return (
-        <MainCard title={`Calificaciones - ${activeCourse.subject_details?.name || ''} (${activeCourse.parallel || ''})`}>
+        <MainCard
+            title={`Calificaciones - ${activeCourse.subject_details?.name || ''} (${activeCourse.parallel || ''})`}
+            contentSX={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}
+        >
             <Dialog open={loading} onClose={() => { }}>
                 <DialogContent>
                     <CircularProgress />
@@ -612,31 +616,32 @@ const Grades = () => {
                             size="small"
                         />
                     </Grid>
-                    <Grid>
-                        <Tooltip title="Exportar Calificaciones">
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => setExportDialogOpen(true)}
-                                startIcon={<IconDownload />}
-                                style={{ marginRight: 8 }}
-                            >
-                                Exportar
-                            </Button>
-                        </Tooltip>
-                        <Tooltip title="Ajustes de Calificaciones">
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => setSettingsOpen(true)}
-                                startIcon={<IconSettings />}
-                                style={{ marginRight: 8 }}
-                            >
-                                Ajustes
-                            </Button>
-                        </Tooltip>
-                        {/* Auto-save enabled, manual button removed */}
-                    </Grid>
+                    {!isMobile && (
+                        <Grid>
+                            <Tooltip title="Exportar Calificaciones">
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => setExportDialogOpen(true)}
+                                    startIcon={<IconDownload />}
+                                    style={{ marginRight: 8 }}
+                                >
+                                    Exportar
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Ajustes de Calificaciones">
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => setSettingsOpen(true)}
+                                    startIcon={<IconSettings />}
+                                    style={{ marginRight: 8 }}
+                                >
+                                    Ajustes
+                                </Button>
+                            </Tooltip>
+                        </Grid>
+                    )}
                 </Grid>
 
                 <Divider style={{ margin: '20px 0' }} />
@@ -940,142 +945,81 @@ const Grades = () => {
                 {/* Mobile View */}
                 {isMobile && (
                     <>
-                    <List>
-                        {filteredRows.map((row) => {
-                            return (
-                                <Accordion key={row.enrollment_id}>
-                                    <AccordionSummary expandIcon={<IconChevronDown />}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                            <Typography variant="subtitle1" style={{ fontWeight: 'bold' }}>
-                                                {row.paterno} {row.materno} {row.nombre}
-                                            </Typography>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                                                <Typography variant="body2" color="textSecondary">CI: {row.ci}</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
+                            {filteredRows.length === 0 ? (
+                                <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 4 }}>
+                                    No hay estudiantes.
+                                </Typography>
+                            ) : (
+                                filteredRows.map((row, idx) => (
+                                    <Card
+                                        key={row.enrollment_id}
+                                        elevation={0}
+                                        sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}
+                                    >
+                                        <CardActionArea onClick={() => handleOpenDetailModal(row)} sx={{ px: 2, py: 1.25 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography variant="body2" fontWeight={600} noWrap>
+                                                        {row.paterno} {row.materno} {row.nombre}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {row.ci}
+                                                    </Typography>
+                                                </Box>
                                                 {showFinalGrade && (
-                                                    <Typography variant="body2" style={{ fontWeight: 'bold', color: '#2e7d32' }}>
-                                                        Nota Final: {row._finalGrade}
-                                                    </Typography>
+                                                    <Chip
+                                                        label={row._finalGrade !== '-' ? row._finalGrade : '—'}
+                                                        size="small"
+                                                        sx={{
+                                                            fontWeight: 700,
+                                                            fontSize: '0.8rem',
+                                                            minWidth: 48,
+                                                            ...(row._finalGrade !== '-'
+                                                                ? { backgroundColor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }
+                                                                : { backgroundColor: 'transparent', color: 'text.disabled', border: '1px solid', borderColor: 'divider' }
+                                                            )
+                                                        }}
+                                                    />
                                                 )}
-                                            </div>
-                                        </div>
-                                    </AccordionSummary>
-                                    <AccordionDetails style={{ flexDirection: 'column', padding: '0 16px 16px' }}>
-                                        {structure.map((group) => {
-                                            const visibleSubs = group.sub_criteria.filter(s => s.visible);
-                                            const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
-                                            const totalVisible = visibleSubs.length + visibleSpecials.length;
-
-                                            if (totalVisible === 0 && !showCriterionGrades) return null;
-
-                                            return (
-                                                <div key={group.id} style={{ marginBottom: 16 }}>
-                                                    <Typography variant="subtitle2" style={{ backgroundColor: '#e3f2fd', padding: '4px 8px', borderRadius: 4, marginBottom: 8 }}>
-                                                        {group.name} ({group.weight}%)
-                                                    </Typography>
-                                                    {visibleSubs.map(sub => (
-                                                        <div key={sub.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 8 }}>
-                                                            <Typography variant="body2" style={{ flex: 1 }}>{sub.name} ({sub.percentage}%)</Typography>
-                                                            <div style={{ width: 100 }}>
-                                                                {sub.has_tasks || sub.has_projects ? (
-                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                                        <Typography variant="body2" style={{ marginRight: 8, fontWeight: 'bold' }}>
-                                                                            {row.grades[sub.id] !== undefined && row.grades[sub.id] !== null ? parseFloat(row.grades[sub.id]).toFixed(2) : '-'}
-                                                                        </Typography>
-                                                                        {sub.has_tasks ? (
-                                                                            <IconButton onClick={() => handleOpenTaskModal(row, sub.id)} size="small" color="primary">
-                                                                                <IconEye size="1.2rem" />
-                                                                            </IconButton>
-                                                                        ) : sub.has_projects ? (
-                                                                            (() => {
-                                                                                const project = projects.find(p => p.sub_criterion === sub.id && p.members.includes(row.enrollment_id));
-                                                                                return (
-                                                                                    <IconButton size="small" onClick={() => project ? handleManageProject(project) : null} color={project ? "secondary" : "default"}>
-                                                                                        <IconNotebook size="1.2rem" />
-                                                                                    </IconButton>
-                                                                                );
-                                                                            })()
-                                                                        ) : null}
-                                                                    </div>
-                                                                ) : sub.editable ? (
-                                                                    <TextField
-                                                                        type="number"
-                                                                        value={row.grades[sub.id] || ''}
-                                                                        onChange={(e) => {
-                                                                            let val = e.target.value;
-                                                                            if (val !== '') {
-                                                                                const numVal = parseFloat(val);
-                                                                                if (numVal > sub.percentage) return;
-                                                                                if (numVal < 0) return;
-                                                                            }
-                                                                            handleScoreChange(row.enrollment_id, sub.id, val);
-                                                                        }}
-                                                                        variant="outlined"
-                                                                        size="small"
-                                                                        fullWidth
-                                                                        inputProps={{ min: 0, max: sub.percentage, step: "0.01", style: { textAlign: 'center' } }}
-                                                                    />
-                                                                ) : (
-                                                                    <Typography variant="body2" align="right">
-                                                                        {row.grades[sub.id] !== undefined && row.grades[sub.id] !== null ? parseFloat(row.grades[sub.id]).toFixed(2) : '-'}
-                                                                    </Typography>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {visibleSpecials.map(spec => (
-                                                        <div key={spec.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 8, backgroundColor: '#fff3e0', padding: 4, borderRadius: 4 }}>
-                                                            <Typography variant="body2" style={{ flex: 1, color: '#e65100' }}>⭐ {spec.name} (+{spec.percentage})</Typography>
-                                                            <div style={{ width: 100 }}>
-                                                                {spec.has_tasks ? (
-                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                                        <Typography variant="body2" style={{ marginRight: 8, color: '#e65100', fontWeight: 'bold' }}>
-                                                                            {row.grades[spec.id] !== undefined && row.grades[spec.id] !== null ? `+${parseFloat(row.grades[spec.id]).toFixed(2)}` : '-'}
-                                                                        </Typography>
-                                                                        <IconButton onClick={() => handleOpenTaskModal(row, `special-${spec.id}`)} size="small" style={{ color: '#e65100' }}>
-                                                                            <IconEye size="1.2rem" />
-                                                                        </IconButton>
-                                                                    </div>
-                                                                ) : (
-                                                                    <TextField
-                                                                        type="number"
-                                                                        value={row.grades[spec.id] || ''}
-                                                                        onChange={(e) => {
-                                                                            let val = e.target.value;
-                                                                            if (val !== '') {
-                                                                                const numVal = parseFloat(val);
-                                                                                if (numVal > spec.percentage) return;
-                                                                                if (numVal < 0) return;
-                                                                            }
-                                                                            handleScoreChange(row.enrollment_id, spec.id, val);
-                                                                        }}
-                                                                        variant="outlined"
-                                                                        size="small"
-                                                                        fullWidth
-                                                                        inputProps={{ min: 0, max: spec.percentage, step: "0.01", style: { textAlign: 'center', color: '#e65100' } }}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })}
-                                    </AccordionDetails>
-                                </Accordion>
-                            );
-                        })}
-                    </List>
-                    <TablePagination
-                        component="div"
-                        count={totalCount}
-                        page={page}
-                        onPageChange={handlePageChange}
-                        rowsPerPage={pageSize}
-                        onRowsPerPageChange={handlePageSizeChange}
-                        rowsPerPageOptions={[15, 30, 50]}
-                        labelRowsPerPage="Por página:"
-                        labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
-                    />
+                                            </Box>
+                                        </CardActionArea>
+                                    </Card>
+                                ))
+                            )}
+                        </Box>
+                        <TablePagination
+                            component="div"
+                            count={totalCount}
+                            page={page}
+                            onPageChange={handlePageChange}
+                            rowsPerPage={pageSize}
+                            onRowsPerPageChange={handlePageSizeChange}
+                            rowsPerPageOptions={[15, 30, 50]}
+                            labelRowsPerPage="Por página:"
+                            labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+                            sx={{ '& .MuiTablePagination-toolbar': { flexWrap: 'wrap', justifyContent: 'center' } }}
+                        />
+                        {/* Mobile FAB SpeedDial */}
+                        <SpeedDial
+                            ariaLabel="Opciones"
+                            sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1200 }}
+                            icon={<SpeedDialIcon icon={<IconDotsVertical />} />}
+                            direction="up"
+                        >
+                            <SpeedDialAction
+                                icon={<IconDownload size="1.2rem" />}
+                                tooltipTitle="Exportar"
+                                tooltipOpen
+                                onClick={() => setExportDialogOpen(true)}
+                            />
+                            <SpeedDialAction
+                                icon={<IconSettings size="1.2rem" />}
+                                tooltipTitle="Ajustes"
+                                tooltipOpen
+                                onClick={() => setSettingsOpen(true)}
+                            />
+                        </SpeedDial>
                     </>
                 )}            </CardContent >
             <Snackbar
@@ -1117,6 +1061,7 @@ const Grades = () => {
                 structure={structure}
                 projects={projects}
                 activeCourse={activeCourse}
+                onScoreChange={handleScoreChange}
                 onManageProject={(project, group) => {
                     let maxScore = 100;
                     if (group) {

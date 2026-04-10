@@ -1025,23 +1025,45 @@ const TaskGrading = () => {
                 ))}
             </Menu>
             {/* Mobile Grading Modal */}
-            <Dialog fullScreen open={mobileModalOpen} sx={{ zIndex: 9999 }} onClose={() => {
-                setMobileModalOpen(false);
+            <Dialog 
+                open={mobileModalOpen} 
+                sx={{ 
+                    zIndex: 9999,
+                    '& .MuiDialog-container': {
+                        alignItems: { xs: 'flex-end', sm: 'center' }
+                    }
+                }} 
+                onClose={() => {
+                    setMobileModalOpen(false);
                     setMobileSelectedRow(null);
                 }}
                 fullWidth
                 maxWidth="xs"
+                PaperProps={{
+                    sx: {
+                        m: { xs: 0, sm: 2 },
+                        width: '100%',
+                        borderRadius: { xs: '24px 24px 0 0', sm: '16px' },
+                        pb: { xs: 2, sm: 0 },
+                        maxHeight: '85vh',
+                        boxShadow: '0px -4px 20px rgba(0, 0, 0, 0.05)'
+                    }
+                }}
             >
                 {mobileSelectedRow && (
                     <>
-                        <DialogTitle style={{ paddingBottom: 8, textAlign: 'center' }}>
+                        <DialogTitle sx={{ pb: 1, pt: 3, textAlign: 'center', position: 'relative' }}>
+                            <div style={{ 
+                                width: 40, height: 4, backgroundColor: theme.palette.divider, borderRadius: 8, 
+                                position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)'
+                            }} />
                             <Typography variant="h6" style={{ fontWeight: 'bold', lineHeight: 1.3, fontSize: '1.25rem' }}>
                                 {mobileSelectedRow.paterno} {mobileSelectedRow.materno} {mobileSelectedRow.nombre}
                             </Typography>
                         </DialogTitle>
-                        <DialogContent style={{ paddingTop: 0 }}>
+                        <DialogContent style={{ paddingTop: 16 }}>
                             {visibleTasks.length === 0 ? (
-                                <Typography variant="body2" color="textSecondary">No hay tareas visibles.</Typography>
+                                <Typography variant="body2" color="textSecondary" align="center">No hay tareas visibles.</Typography>
                             ) : (
                                 visibleTasks.map(task => {
                                     // Use live data from rows (mobileSelectedRow may be stale after grading)
@@ -1049,12 +1071,18 @@ const TaskGrading = () => {
                                     const score = liveRow.scores[task.id];
                                     const letter = getLetterFromScore(score);
                                     return (
-                                        <div key={task.id} style={{ marginBottom: 20 }}>
-                                            <Typography variant="body2" style={{ fontWeight: 600, marginBottom: 8 }}>
+                                        <div key={task.id} style={{ 
+                                            marginBottom: 16, 
+                                            padding: '16px', 
+                                            borderRadius: '16px', 
+                                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                                            border: `1px solid ${theme.palette.divider}`
+                                        }}>
+                                            <Typography variant="body1" style={{ fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
                                                 {task.name}
-                                                {task.is_locked && <IconLock size="0.9rem" color="red" style={{ marginLeft: 6, verticalAlign: 'middle' }} />}
+                                                {task.is_locked && <IconLock size="1rem" color="red" style={{ marginLeft: 6, verticalAlign: 'middle' }} />}
                                             </Typography>
-                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
                                                 {Object.keys(LETTER_SCORES).map(l => (
                                                     <Button
                                                         key={l}
@@ -1064,11 +1092,12 @@ const TaskGrading = () => {
                                                         sx={{
                                                             minWidth: 0,
                                                             flex: 1,
-                                                            maxWidth: '56px',
-                                                            aspectRatio: '1 / 1',
-                                                            fontSize: { xs: '1rem', sm: '1.1rem' },
+                                                            height: { xs: '44px', sm: '48px' },
+                                                            fontSize: { xs: '1.05rem', sm: '1.1rem' },
                                                             fontWeight: 'bold',
                                                             p: 0,
+                                                            borderRadius: '10px',
+                                                            boxShadow: letter === l ? '0 4px 10px rgba(0,0,0,0.15)' : 'none'
                                                         }}
                                                         onClick={() => {
                                                             handleGradeClick(liveRow.enrollment_id, task.id, l);
@@ -1082,38 +1111,39 @@ const TaskGrading = () => {
                                                         {l}
                                                     </Button>
                                                 ))}
-                                                {letter && (
-                                                    <Tooltip title="Borrar nota">
-                                                        <IconButton
-                                                            disabled={task.is_locked}
-                                                            onClick={() => {
-                                                                handleClearScore(liveRow.enrollment_id, task.id);
-                                                                setMobileSelectedRow(prev => ({
-                                                                    ...prev,
-                                                                    scores: { ...prev.scores, [task.id]: null }
-                                                                }));
-                                                            }}
-                                                            sx={{
-                                                                color: 'error.main',
-                                                                border: '1px solid',
-                                                                borderColor: 'error.main',
-                                                                borderRadius: 1,
-                                                                flex: 1,
-                                                                maxWidth: '56px',
-                                                                aspectRatio: '1 / 1',
-                                                            }}
-                                                        >
-                                                            <IconX size="1.2rem" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                )}
+                                                <Tooltip title="Borrar nota">
+                                                    <IconButton
+                                                        disabled={task.is_locked || !letter}
+                                                        onClick={() => {
+                                                            if (!letter) return;
+                                                            handleClearScore(liveRow.enrollment_id, task.id);
+                                                            setMobileSelectedRow(prev => ({
+                                                                ...prev,
+                                                                scores: { ...prev.scores, [task.id]: null }
+                                                            }));
+                                                        }}
+                                                        sx={{
+                                                            color: letter ? 'error.main' : 'text.disabled',
+                                                            border: '1px solid',
+                                                            borderColor: letter ? 'error.main' : 'divider',
+                                                            backgroundColor: letter ? 'rgba(211,47,47,0.04)' : 'transparent',
+                                                            borderRadius: '10px',
+                                                            flex: 1,
+                                                            minWidth: 0,
+                                                            height: { xs: '44px', sm: '48px' },
+                                                            transition: 'all 0.2s',
+                                                        }}
+                                                    >
+                                                        <IconX size="1.2rem" />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </div>
                                         </div>
                                     );
                                 })
                             )}
                         </DialogContent>
-                        <DialogActions>
+                        <DialogActions style={{ padding: '16px', borderTop: `1px solid ${theme.palette.divider}` }}>
                             <Button
                                 onClick={() => {
                                     setMobileModalOpen(false);
@@ -1122,9 +1152,10 @@ const TaskGrading = () => {
                                 color="primary"
                                 variant="contained"
                                 fullWidth
-                                style={{ margin: '0 16px 8px' }}
+                                size="large"
+                                style={{ borderRadius: '12px', fontWeight: 'bold' }}
                             >
-                                Cerrar
+                                Listo
                             </Button>
                         </DialogActions>
                     </>

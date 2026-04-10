@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -12,22 +12,54 @@ import {
     AccordionDetails,
     List,
     ListItem,
-    ListItemText,
-    IconButton,
-    Tooltip,
     Divider,
     Box,
+    TextField,
+    IconButton,
+    Tooltip,
     useMediaQuery,
     useTheme
 } from '@mui/material';
 import { IconChevronDown, IconEye, IconNotebook } from '@tabler/icons-react';
 import StudentTaskModal from './StudentTaskModal';
 
-// Mirrors the alternating group colors used in the Grades table
 const GROUP_COLORS = [
-    { bg: '#e3f2fd', border: '#2196f3', chipBg: '#1565c0' },  // primary light / primary800
-    { bg: '#f3e5f5', border: '#673ab7', chipBg: '#5e35b1' },  // secondary light / secondaryDark
+    { bg: '#e3f2fd', border: '#1976d2', chipBg: '#1565c0' },
+    { bg: '#f3e5f5', border: '#7b1fa2', chipBg: '#6a1b9a' },
 ];
+
+// Recalculate final grade from local grades + structure
+const calcFinalGrade = (localGrades, structure) => {
+    let total = 0;
+    structure.forEach(group => {
+        let groupTotal = 0;
+        group.sub_criteria.forEach(sub => {
+            const v = localGrades[sub.id];
+            if (v !== undefined && v !== null && v !== '') groupTotal += parseFloat(v);
+        });
+        (group.special_criteria || []).forEach(spec => {
+            const v = localGrades[spec.id];
+            if (v !== undefined && v !== null && v !== '') groupTotal += parseFloat(v);
+        });
+        const capped = Math.min(groupTotal, parseFloat(group.weight));
+        if (capped > 0) total += capped;
+    });
+    return total > 0 ? total.toFixed(2) : '-';
+};
+
+const calcCriterionGrade = (localGrades, group) => {
+    let total = 0;
+    group.sub_criteria.forEach(sub => {
+        const v = localGrades[sub.id];
+        if (v !== undefined && v !== null && v !== '') total += parseFloat(v);
+    });
+    (group.special_criteria || []).forEach(spec => {
+        const v = localGrades[spec.id];
+        if (v !== undefined && v !== null && v !== '') total += parseFloat(v);
+    });
+    const capped = Math.min(total, parseFloat(group.weight));
+    return capped > 0 ? capped.toFixed(2) : '-';
+};
 
 const StudentDetailModal = ({
     open,
@@ -36,26 +68,37 @@ const StudentDetailModal = ({
     structure,
     projects,
     activeCourse,
+    onScoreChange,
     onManageProject
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+    const [localGrades, setLocalGrades] = useState({});
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [taskModalSubCritId, setTaskModalSubCritId] = useState(null);
+
+    useEffect(() => {
+        if (studentRow) setLocalGrades({ ...(studentRow.grades || {}) });
+    }, [studentRow?.enrollment_id, open]);
 
     if (!studentRow) return null;
 
     const fullName = `${studentRow.paterno} ${studentRow.materno} ${studentRow.nombre}`.trim();
+    const finalGrade = calcFinalGrade(localGrades, structure);
+
+    const handleChange = (critId, value, max) => {
+        if (value !== '') {
+            const num = parseFloat(value);
+            if (num > max || num < 0) return;
+        }
+        setLocalGrades(prev => ({ ...prev, [critId]: value }));
+        onScoreChange?.(studentRow.enrollment_id, critId, value);
+    };
 
     const handleOpenTasks = (subCritId) => {
         setTaskModalSubCritId(subCritId);
         setTaskModalOpen(true);
-    };
-
-    const handleCloseTaskModal = () => {
-        setTaskModalOpen(false);
-        setTaskModalSubCritId(null);
     };
 
     return (
@@ -63,71 +106,95 @@ const StudentDetailModal = ({
             <Dialog
                 open={open}
                 onClose={onClose}
-                fullScreen={isMobile}
                 fullWidth
-                maxWidth="sm"
-                sx={{ zIndex: 1300 }}
+                maxWidth="xs"
+                scroll="paper"
+                PaperProps={{
+                    sx: isMobile ? {
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        m: 0,
+                        width: '100%',
+                        maxWidth: '100%',
+                        borderRadius: '20px 20px 0 0',
+                        maxHeight: '88vh',
+                    } : { borderRadius: 3 }
+                }}
+                sx={{ zIndex: 1400 }}
             >
-                {/* Header — matches StudentTaskModal style: grey bg, centered */}
-                <DialogTitle component="div" sx={{ pb: 1, textAlign: 'center', backgroundColor: '#f5f5f5' }}>
-                    <Typography variant="h6" fontWeight="bold" lineHeight={1.3}>
+                {/* Drag handle (mobile only) */}
+                {isMobile && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0 }}>
+                        <Box sx={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'divider' }} />
+                    </Box>
+                )}
+
+                <DialogTitle component="div" sx={{ pt: isMobile ? 1 : 2, pb: 1.5, px: 2.5 }}>
+                    <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3} noWrap>
                         {fullName}
                     </Typography>
-                    <Box sx={{ mt: 0.75, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box sx={{ mt: 0.75, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
                         <Chip
-                            label={`CI: ${studentRow.ci}`}
+                            label={studentRow.ci}
                             size="small"
-                            color="primary"
                             variant="outlined"
-                            sx={{ fontWeight: 'bold', fontSize: '0.82rem' }}
+                            sx={{ fontWeight: 600, fontSize: '0.75rem', height: 22 }}
                         />
-                        {studentRow._finalGrade && studentRow._finalGrade !== '-' && (
-                            <Chip
-                                label={`Nota Final: ${studentRow._finalGrade}`}
-                                size="small"
-                                sx={{
-                                    backgroundColor: '#c8e6c9',
-                                    color: '#2e7d32',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.82rem',
-                                    border: '1px solid #4caf50'
-                                }}
-                            />
-                        )}
+                        <Chip
+                            label={finalGrade !== '-' ? `${finalGrade} pts` : 'Sin nota'}
+                            size="small"
+                            sx={{
+                                height: 22,
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                ...(finalGrade !== '-'
+                                    ? { backgroundColor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }
+                                    : { backgroundColor: '#f5f5f5', color: '#9e9e9e' }
+                                )
+                            }}
+                        />
                     </Box>
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 0 }}>
+                <Divider />
+
+                <DialogContent sx={{ p: 0, overflowX: 'hidden' }}>
                     {structure.map((group, gIdx) => {
-                        const criterionData = studentRow._criterionGrades?.[group.id] || { formatted: '-', grade: 0 };
                         const { bg, border, chipBg } = GROUP_COLORS[gIdx % 2];
+                        const criterionGrade = calcCriterionGrade(localGrades, group);
 
                         return (
-                            <Accordion key={group.id} disableGutters elevation={0} square>
+                            <Accordion key={group.id} disableGutters elevation={0} square defaultExpanded={gIdx === 0}>
                                 <AccordionSummary
-                                    expandIcon={<IconChevronDown size="1.2rem" color={border} />}
+                                    expandIcon={<IconChevronDown size="1rem" color={border} />}
                                     sx={{
+                                        minHeight: 40,
                                         backgroundColor: bg,
-                                        borderLeft: `4px solid ${border}`,
-                                        borderTop: gIdx > 0 ? '1px solid #e0e0e0' : 'none',
-                                        '&:hover': { filter: 'brightness(0.96)' }
+                                        borderLeft: `3px solid ${border}`,
+                                        borderBottom: '1px solid',
+                                        borderBottomColor: 'divider',
+                                        '& .MuiAccordionSummary-content': { my: 0.75 }
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
-                                        <Typography fontWeight="bold" sx={{ color: chipBg }}>
+                                    <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', pr: 0.5 }}>
+                                        <Typography variant="body2" fontWeight={700} sx={{ color: chipBg }}>
                                             {group.name}
-                                            <Typography component="span" variant="caption" sx={{ ml: 0.75, color: '#757575', fontWeight: 'normal' }}>
-                                                ({group.weight} Pts)
+                                            <Typography component="span" variant="caption" sx={{ ml: 0.5, color: 'text.secondary', fontWeight: 400 }}>
+                                                / {group.weight} pts
                                             </Typography>
                                         </Typography>
                                         <Chip
-                                            label={`${criterionData.formatted} / ${group.weight}`}
+                                            label={criterionGrade !== '-' ? criterionGrade : '—'}
                                             size="small"
                                             sx={{
+                                                height: 20,
+                                                fontSize: '0.72rem',
+                                                fontWeight: 700,
                                                 backgroundColor: chipBg,
                                                 color: '#fff',
-                                                fontWeight: 'bold',
-                                                fontSize: '0.78rem'
+                                                minWidth: 40
                                             }}
                                         />
                                     </Box>
@@ -136,10 +203,9 @@ const StudentDetailModal = ({
                                 <AccordionDetails sx={{ p: 0 }}>
                                     <List dense disablePadding>
                                         {group.sub_criteria.map((sub, sIdx) => {
-                                            const rawScore = studentRow.grades?.[sub.id];
+                                            const rawScore = localGrades[sub.id];
                                             const score = rawScore !== undefined && rawScore !== null && rawScore !== ''
-                                                ? parseFloat(rawScore).toFixed(2)
-                                                : '-';
+                                                ? parseFloat(rawScore).toFixed(2) : '-';
                                             const project = sub.has_projects
                                                 ? projects.find(p => p.sub_criterion === sub.id && p.members.includes(studentRow.enrollment_id))
                                                 : null;
@@ -147,41 +213,60 @@ const StudentDetailModal = ({
                                             return (
                                                 <React.Fragment key={sub.id}>
                                                     {sIdx > 0 && <Divider component="li" />}
-                                                    <ListItem sx={{ px: 3, py: 0.75, backgroundColor: '#fafafa' }}>
-                                                        <ListItemText
-                                                            primary={
-                                                                <Typography variant="body2" fontWeight={600} color="text.primary">
-                                                                    {sub.name}
-                                                                </Typography>
-                                                            }
-                                                            secondary={`Máx: ${sub.percentage} pts`}
-                                                        />
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <Typography
-                                                                variant="body2"
-                                                                fontWeight="bold"
-                                                                sx={{ color: score !== '-' ? border : '#bdbdbd', minWidth: 36, textAlign: 'right' }}
-                                                            >
-                                                                {score}
+                                                    <ListItem sx={{ px: 2.5, py: 1, gap: 1 }}>
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={500} noWrap>
+                                                                {sub.name}
                                                             </Typography>
-                                                            {sub.has_tasks && (
-                                                                <Tooltip title="Ver Tareas">
-                                                                    <IconButton size="small" color="primary" onClick={() => handleOpenTasks(sub.id)}>
-                                                                        <IconEye size="1.1rem" />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                            )}
-                                                            {sub.has_projects && (
-                                                                <Tooltip title={project ? `Proyecto: ${project.name}` : 'Sin proyecto asignado'}>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        color={project ? 'secondary' : 'default'}
-                                                                        onClick={() => project && onManageProject(project, group)}
-                                                                        sx={{ color: project ? undefined : '#bdbdbd' }}
-                                                                    >
-                                                                        <IconNotebook size="1.1rem" />
-                                                                    </IconButton>
-                                                                </Tooltip>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Máx {sub.percentage} pts
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                                                            {sub.has_tasks ? (
+                                                                <>
+                                                                    <Typography variant="body2" fontWeight={700} sx={{ color: border, minWidth: 32, textAlign: 'right' }}>
+                                                                        {score}
+                                                                    </Typography>
+                                                                    <Tooltip title="Ver Tareas">
+                                                                        <IconButton size="small" color="primary" onClick={() => handleOpenTasks(sub.id)}>
+                                                                            <IconEye size="1rem" />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                </>
+                                                            ) : sub.has_projects ? (
+                                                                <>
+                                                                    <Typography variant="body2" fontWeight={700} sx={{ color: border, minWidth: 32, textAlign: 'right' }}>
+                                                                        {score}
+                                                                    </Typography>
+                                                                    <Tooltip title={project ? `Proyecto: ${project.name}` : 'Sin proyecto'}>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            color={project ? 'secondary' : 'default'}
+                                                                            onClick={() => project && onManageProject(project, group)}
+                                                                            sx={{ color: project ? undefined : '#ccc' }}
+                                                                        >
+                                                                            <IconNotebook size="1rem" />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                </>
+                                                            ) : sub.editable ? (
+                                                                <TextField
+                                                                    type="number"
+                                                                    value={localGrades[sub.id] ?? ''}
+                                                                    onChange={e => handleChange(sub.id, e.target.value, sub.percentage)}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    sx={{ width: 72 }}
+                                                                    inputProps={{
+                                                                        min: 0, max: sub.percentage, step: '0.01',
+                                                                        style: { textAlign: 'center', padding: '4px 6px', fontSize: '0.85rem' }
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ minWidth: 32, textAlign: 'right' }}>
+                                                                    {score}
+                                                                </Typography>
                                                             )}
                                                         </Box>
                                                     </ListItem>
@@ -189,39 +274,48 @@ const StudentDetailModal = ({
                                             );
                                         })}
 
-                                        {/* Special criteria (extra points) — matches #fff3e0 used in Grades table */}
                                         {(group.special_criteria || []).map((spec) => {
-                                            const rawScore = studentRow.grades?.[spec.id];
+                                            const rawScore = localGrades[spec.id];
                                             const score = rawScore !== undefined && rawScore !== null && rawScore !== ''
-                                                ? `+${parseFloat(rawScore).toFixed(2)}`
-                                                : '-';
+                                                ? `+${parseFloat(rawScore).toFixed(2)}` : '-';
 
                                             return (
                                                 <React.Fragment key={`spec-${spec.id}`}>
                                                     <Divider component="li" />
-                                                    <ListItem sx={{ px: 3, py: 0.75, backgroundColor: '#fff3e0' }}>
-                                                        <ListItemText
-                                                            primary={
-                                                                <Typography variant="body2" fontWeight={600} sx={{ color: '#e65100' }}>
-                                                                    ⭐ {spec.name} (Extra)
-                                                                </Typography>
-                                                            }
-                                                            secondary={
-                                                                <Typography variant="caption" sx={{ color: '#bf360c' }}>
-                                                                    Máx: +{spec.percentage} pts
-                                                                </Typography>
-                                                            }
-                                                        />
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <Typography variant="body2" fontWeight="bold" sx={{ color: '#e65100', minWidth: 36, textAlign: 'right' }}>
-                                                                {score}
+                                                    <ListItem sx={{ px: 2.5, py: 1, gap: 1, backgroundColor: '#fffde7' }}>
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={500} noWrap sx={{ color: '#e65100' }}>
+                                                                ⭐ {spec.name}
                                                             </Typography>
-                                                            {spec.has_tasks && (
-                                                                <Tooltip title="Ver Tareas Extra">
-                                                                    <IconButton size="small" onClick={() => handleOpenTasks(`special-${spec.id}`)} sx={{ color: '#e65100' }}>
-                                                                        <IconEye size="1.1rem" />
-                                                                    </IconButton>
-                                                                </Tooltip>
+                                                            <Typography variant="caption" sx={{ color: '#bf360c' }}>
+                                                                Máx +{spec.percentage} pts
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                                                            {spec.has_tasks ? (
+                                                                <>
+                                                                    <Typography variant="body2" fontWeight={700} sx={{ color: '#e65100', minWidth: 36, textAlign: 'right' }}>
+                                                                        {score}
+                                                                    </Typography>
+                                                                    <Tooltip title="Ver Tareas Extra">
+                                                                        <IconButton size="small" onClick={() => handleOpenTasks(`special-${spec.id}`)} sx={{ color: '#e65100' }}>
+                                                                            <IconEye size="1rem" />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                </>
+                                                            ) : (
+                                                                <TextField
+                                                                    type="number"
+                                                                    value={localGrades[spec.id] ?? ''}
+                                                                    onChange={e => handleChange(spec.id, e.target.value, spec.percentage)}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    sx={{ width: 72 }}
+                                                                    inputProps={{
+                                                                        min: 0, max: spec.percentage, step: '0.01',
+                                                                        style: { textAlign: 'center', padding: '4px 6px', fontSize: '0.85rem', color: '#e65100' }
+                                                                    }}
+                                                                />
                                                             )}
                                                         </Box>
                                                     </ListItem>
@@ -235,8 +329,8 @@ const StudentDetailModal = ({
                     })}
                 </DialogContent>
 
-                <DialogActions sx={{ px: 2, py: 1.5, backgroundColor: '#f5f5f5' }}>
-                    <Button onClick={onClose} color="primary" variant="contained" fullWidth sx={{ margin: '0 8px' }}>
+                <DialogActions sx={{ px: 2.5, py: 1.5 }}>
+                    <Button onClick={onClose} variant="contained" fullWidth disableElevation sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>
                         Cerrar
                     </Button>
                 </DialogActions>
@@ -244,7 +338,7 @@ const StudentDetailModal = ({
 
             <StudentTaskModal
                 open={taskModalOpen}
-                onClose={handleCloseTaskModal}
+                onClose={() => { setTaskModalOpen(false); setTaskModalSubCritId(null); }}
                 courseId={activeCourse?.id}
                 subCriterionId={taskModalSubCritId}
                 studentRow={studentRow}

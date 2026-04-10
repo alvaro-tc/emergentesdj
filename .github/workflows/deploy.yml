@@ -27,8 +27,3 @@ jobs:
             python manage.py collectstatic --noinput
             sudo systemctl restart gunicorn
             
-            # --- Actualizar Frontend ---
-            cd ../react-ui-vite
-            npm install
-            npm run build
-            # Nginx ya debería estar apuntando a esta carpeta build

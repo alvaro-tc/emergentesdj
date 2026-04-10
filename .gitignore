@@ -100,7 +100,6 @@ node_modules/
 # Production build directories
 dist/
 dist-ssr/
-build/
 out/
 
 # Env logs
