@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Grid, Typography, Card, CardContent, CardMedia, Button, Box } from '@mui/material';
 import axios from 'axios';
@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 
 import InfoModal from './InfoModal';
 import GradesModal from './GradesModal';
+import CourseStatsPanel from '../components/CourseStatsPanel';
 import * as ScheduleUtils from '../../../utils/scheduleUtils';
 
 
@@ -16,6 +17,7 @@ const StudentDashboard = () => {
     const [isLoading, setLoading] = useState(true);
     const [stats, setStats] = useState({});
     const account = useSelector((state) => state.account);
+    const activeCourse = useSelector((state) => state.account.activeCourse);
 
     const [infoOpen, setInfoOpen] = useState(false);
     const [gradesOpen, setGradesOpen] = useState(false);
@@ -63,12 +65,27 @@ const StudentDashboard = () => {
         setSelectedCourse(null);
     };
 
+    // Find the enrolled course that matches the active paralelo to get its criteria_grades
+    const activeCourseData = useMemo(() => {
+        if (!activeCourse?.id || !stats.enrolled_courses) return null;
+        return stats.enrolled_courses.find((c) => c.id === activeCourse.id) ?? null;
+    }, [activeCourse, stats.enrolled_courses]);
+
     if (isLoading) {
         return <Typography>Cargando cursos...</Typography>;
     }
 
     return (
         <Grid container spacing={gridSpacing}>
+            {activeCourseData?.criteria_grades && (
+                <Grid size={12}>
+                    <CourseStatsPanel
+                        criteriaGrades={activeCourseData.criteria_grades}
+                        courseName={`${activeCourseData.name ?? ''} — Paralelo ${activeCourseData.parallel ?? ''}`}
+                        studentMode
+                    />
+                </Grid>
+            )}
             <Grid size={12}>
                 <Typography variant="h2" gutterBottom>Mis Cursos Inscritos</Typography>
             </Grid>

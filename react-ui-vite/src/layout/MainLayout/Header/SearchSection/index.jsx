@@ -317,6 +317,7 @@ const SearchSection = () => {
                                 keepMounted
                                 open={Boolean(anchorEl)}
                                 onClose={handleSettingsClose}
+                                sx={{ zIndex: 1302 }}
                             >
                                 <MenuItem>
                                     <FormControl fullWidth>
