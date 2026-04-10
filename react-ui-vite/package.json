@@ -36,7 +36,7 @@
     "react-router-dom": "^6.30.3",
     "react-slick": "^0.31.0",
     "recharts": "^2.15.4",
-    "redux": "^4.2.1",
+    "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
     "slick-carousel": "^1.8.1",
     "xlsx": "^0.18.5",
