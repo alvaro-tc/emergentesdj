@@ -20,7 +20,6 @@ Sistema de gestión escolar optimizado para alto rendimiento:
 - **Setup**: `npm install` (Node 22.x o 24.x LTS)
 - **Run**: `npm run dev`
 - **Build**: `npm run build`
-- **Nota**: El directorio `react-ui/` es legacy (CRA) y debe ser ignorado completamente.
 
 ## Arquitectura y Lógica Core
 - **Auth**: `api.authentication`. Flujo: JWT + verificación en `ActiveSession` (DB). El logout revoca la sesión eliminando el registro.

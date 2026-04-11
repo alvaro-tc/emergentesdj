@@ -12,6 +12,7 @@ import {
     IconEye, IconEyeOff, IconTag, IconCategory
 } from '@tabler/icons-react';
 import MainCard from '../../../ui-component/cards/MainCard';
+import RichTextEditor from '../../../ui-component/RichTextEditor';
 import axios from 'axios';
 import configData from '../../../config';
 import { useSelector } from 'react-redux';
@@ -395,11 +396,15 @@ const BlogManagement = () => {
                             />
                         </Grid>
                         <Grid size={12}>
-                            <TextField
-                                fullWidth label="Contenido" name="content" value={formData.content}
-                                onChange={handleFormChange} multiline rows={10} required
-                                helperText="Puedes usar HTML para dar formato al contenido"
-                            />
+                            <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
+                                    Contenido *
+                                </Typography>
+                                <RichTextEditor
+                                    value={formData.content}
+                                    onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
+                                />
+                            </Box>
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
