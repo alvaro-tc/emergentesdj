@@ -15,6 +15,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}     # IP de tu servidor
           username: ${{ secrets.SERVER_USER }} # Usuario (ej: root o ubuntu)
           key: ${{ secrets.SSH_PRIVATE_KEY }}  # Tu llave privada SSH
+          port: 20022
           script: |
             cd /www/emergentesdj
             
