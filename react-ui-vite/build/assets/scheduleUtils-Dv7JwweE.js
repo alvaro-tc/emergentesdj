@@ -1,1 +1,0 @@
-const i=r=>{if(!r)return[];try{const t=JSON.parse(r);if(Array.isArray(t)&&t.length>0)return t.map(e=>{const o=e.day||"",s=e.start||"",n=e.end||"";return o&&(s||n)?`${o}: ${s}${n?" - "+n:""}`:`${o} ${s} ${n}`});if(typeof r=="string")return[r]}catch{return[r]}return[]};export{i as g};
