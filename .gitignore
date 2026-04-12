@@ -102,6 +102,7 @@ node_modules/
 dist/
 dist-ssr/
 out/
+react-ui-vite/build/
 
 # Env logs
 *.local
