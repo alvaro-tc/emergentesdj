@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}  # Tu llave privada SSH
           port: 20022
           script: |
-            cd /www/emergentesdj
+            cd ~/www/emergentesdj
             
             git pull origin master
             # --- Build Frontend React Vite ---
