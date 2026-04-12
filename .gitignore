@@ -85,7 +85,7 @@ static_files/
 # =========================
 # React / Vite / Frontend
 # =========================
-# Logs
+# Logs:
 logs
 *.log
 npm-debug.log*
@@ -117,6 +117,7 @@ coverage/
 .npm
 .eslintcache
 .vite/
+.build/
 
 # TypeScript
 *.tsbuildinfo
