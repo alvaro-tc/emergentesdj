@@ -17,8 +17,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}  # Tu llave privada SSH
           script: |
             cd /www/emergentesdj
-            git pull origin master
             
+            git pull origin master
+            # --- Build Frontend React Vite ---
+            export NODE_OPTIONS="--max-old-space-size=2048"
+            cd react-ui-vite
+            npm install
+            npm run build
+            cd ..
+
             # --- Actualizar Backend ---
             cd api-server-django
             source venv/bin/activate
