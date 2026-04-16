@@ -217,7 +217,8 @@ class Project(models.Model):
     student_in_charge = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True, related_name='led_projects')
     members = models.ManyToManyField(Enrollment, related_name='projects')
     score = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
-    
+    observations = models.TextField(blank=True, null=True)
+
     def __str__(self):
         return self.name
 
