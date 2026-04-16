@@ -67,7 +67,7 @@ const PublicProjects = () => {
                         Actividades Disponibles
                     </Typography>
                     <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 400, fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                        Encuentra tu proyecto e inscribe a tu grupo
+                        Encuentra tu actividad e inscribe a tu grupo
                     </Typography>
                 </Box>
 
@@ -75,7 +75,7 @@ const PublicProjects = () => {
                 <Box sx={{ maxWidth: 600, mx: 'auto', mb: 6 }}>
                     <TextField
                         fullWidth
-                        placeholder="Buscar por materia o nombre de proyecto..."
+                        placeholder="Buscar por materia o nombre de actividad..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         InputProps={{
@@ -139,7 +139,7 @@ const PublicProjects = () => {
                                             </Box>
 
                                             <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-                                                Proyecto:
+                                                actividad:
                                             </Typography>
                                             <Typography variant="h3" gutterBottom sx={{ minHeight: 40, fontWeight: 600 }}>
                                                 {project.name}
@@ -176,7 +176,7 @@ const PublicProjects = () => {
                             <Grid size={12}>
                                 <Box textAlign="center" py={10}>
                                     <Typography variant="h3" color="textSecondary">
-                                        No hay proyectos disponibles para registro en este momento.
+                                        No hay actividads disponibles para registro en este momento.
                                     </Typography>
                                     <Button component={RouterLink} to="/" variant="text" sx={{ mt: 2 }}>
                                         Volver al inicio

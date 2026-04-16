@@ -3,12 +3,14 @@ import { useSelector } from 'react-redux';
 import {
     Grid, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     IconButton, TextField, Alert, Snackbar, Divider, InputAdornment, TablePagination,
-    Dialog, DialogTitle, DialogContent, DialogActions, Box, List, ListItem, ListItemText, ListItemSecondaryAction
+    Dialog, DialogTitle, DialogContent, DialogActions, Box, List, ListItem, ListItemText, ListItemSecondaryAction,
+    Checkbox, Tooltip
 } from '@mui/material';
 import { Autocomplete } from '@mui/material'; // Standard Material UI Autocomplete
 import MainCard from '../../../ui-component/cards/MainCard';
-import { IconTrash, IconUserPlus, IconUpload, IconUsers, IconPencil, IconSearch } from '@tabler/icons-react';
+import { IconTrash, IconUserPlus, IconUpload, IconUsers, IconPencil, IconSearch, IconDownload } from '@tabler/icons-react';
 import { Chip, CircularProgress as MuiCircularProgress } from '@mui/material';
+import * as XLSX from 'xlsx';
 import axios from 'axios';
 import configData from '../../../config';
 import CourseRequestsDialog from './CourseRequestsDialog';
@@ -48,6 +50,11 @@ const Enrollments = () => {
     const [tableSearch, setTableSearch] = useState('');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
+
+    // Multi-select for bulk delete
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
     // Edit student dialog
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -296,6 +303,40 @@ const Enrollments = () => {
             });
     };
 
+    const handleBulkDelete = () => {
+        if (selectedIds.size === 0) return;
+        setBulkDeleteLoading(true);
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        const promises = Array.from(selectedIds).map(id =>
+            axios.delete(`${configData.API_SERVER}enrollments/${id}/`)
+        );
+        Promise.allSettled(promises).then(results => {
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.filter(r => r.status === 'fulfilled').length;
+            setSnackbar({
+                open: true,
+                message: failed > 0
+                    ? `${succeeded} eliminados, ${failed} con error`
+                    : `${succeeded} inscripciones eliminadas correctamente`,
+                severity: failed > 0 ? 'warning' : 'success'
+            });
+            setSelectedIds(new Set());
+            setBulkDeleteOpen(false);
+            fetchEnrollments();
+        }).finally(() => setBulkDeleteLoading(false));
+    };
+
+    const handleDownloadTemplate = () => {
+        const data = [
+            { CI: '12345678', Paterno: 'Gomez', Materno: 'Lopez', Nombre: 'Juan', Email: 'juan@example.com', Celular: '70000001' },
+            { CI: '87654321', Paterno: 'Quispe', Materno: 'Mamani', Nombre: 'Maria', Email: 'maria@example.com', Celular: '70000002' },
+        ];
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes');
+        XLSX.writeFile(wb, 'plantilla_inscripciones.xlsx');
+    };
+
     if (!activeCourse) {
         return (
             <MainCard title="Inscripciones">
@@ -344,6 +385,25 @@ const Enrollments = () => {
                         </Button>
                     </label>
                 </Grid>
+                <Grid>
+                    <Tooltip title="Descargar plantilla de ejemplo para el Excel">
+                        <Button variant="outlined" color="inherit" startIcon={<IconDownload />} onClick={handleDownloadTemplate}>
+                            Plantilla Excel
+                        </Button>
+                    </Tooltip>
+                </Grid>
+                {selectedIds.size > 0 && (
+                    <Grid>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            startIcon={<IconTrash />}
+                            onClick={() => setBulkDeleteOpen(true)}
+                        >
+                            Eliminar seleccionados ({selectedIds.size})
+                        </Button>
+                    </Grid>
+                )}
                 {(activeCourse?.is_registration_open === true || pendingCount > 0) && (
                     <Grid>
                         <Button
@@ -372,6 +432,35 @@ const Enrollments = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    indeterminate={selectedIds.size > 0 && selectedIds.size < enrollments.filter(e => {
+                                        if (!tableSearch) return true;
+                                        const q = tableSearch.toLowerCase();
+                                        const s = e.student_details || {};
+                                        return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
+                                    }).length}
+                                    checked={enrollments.length > 0 && selectedIds.size === enrollments.filter(e => {
+                                        if (!tableSearch) return true;
+                                        const q = tableSearch.toLowerCase();
+                                        const s = e.student_details || {};
+                                        return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
+                                    }).length}
+                                    onChange={(e) => {
+                                        const filtered = enrollments.filter(en => {
+                                            if (!tableSearch) return true;
+                                            const q = tableSearch.toLowerCase();
+                                            const s = en.student_details || {};
+                                            return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
+                                        });
+                                        if (e.target.checked) {
+                                            setSelectedIds(new Set(filtered.map(en => en.id)));
+                                        } else {
+                                            setSelectedIds(new Set());
+                                        }
+                                    }}
+                                />
+                            </TableCell>
                             <TableCell width={40}>#</TableCell>
                             <TableCell>CI</TableCell>
                             <TableCell>Paterno</TableCell>
@@ -396,7 +485,7 @@ const Enrollments = () => {
                             );
                         }).length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">No se encontraron estudiantes{tableSearch ? ` para "${tableSearch}"` : ''}.</TableCell>
+                                <TableCell colSpan={9} align="center">No se encontraron estudiantes{tableSearch ? ` para "${tableSearch}"` : ''}.</TableCell>
                             </TableRow>
                         ) : (
                             enrollments.filter(e => {
@@ -411,7 +500,22 @@ const Enrollments = () => {
                                     (s.email || '').toLowerCase().includes(q)
                                 );
                             }).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((enrollment, index) => (
-                                <TableRow key={enrollment.id}>
+                                <TableRow
+                                    key={enrollment.id}
+                                    selected={selectedIds.has(enrollment.id)}
+                                    sx={{ '&.Mui-selected': { backgroundColor: 'action.selected' } }}
+                                >
+                                    <TableCell padding="checkbox">
+                                        <Checkbox
+                                            checked={selectedIds.has(enrollment.id)}
+                                            onChange={(e) => {
+                                                const next = new Set(selectedIds);
+                                                if (e.target.checked) next.add(enrollment.id);
+                                                else next.delete(enrollment.id);
+                                                setSelectedIds(next);
+                                            }}
+                                        />
+                                    </TableCell>
                                     <TableCell>{page * rowsPerPage + index + 1}</TableCell>
                                     <TableCell>{enrollment.student_details?.ci_number || 'N/A'}</TableCell>
                                     <TableCell>{enrollment.student_details?.paternal_surname}</TableCell>
@@ -810,6 +914,26 @@ const Enrollments = () => {
                     </Button>
                     <Button onClick={handleConfirmDelete} color="secondary" variant="contained" autoFocus>
                         Eliminar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            {/* BULK DELETE DIALOG */}
+            <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
+                <DialogTitle>Confirmar Eliminación Masiva</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        ¿Está seguro que desea eliminar <strong>{selectedIds.size}</strong> inscripciones seleccionadas?
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                        Esta acción removerá las inscripciones y todas las calificaciones asociadas.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBulkDeleteOpen(false)} color="primary" disabled={bulkDeleteLoading}>
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleBulkDelete} color="error" variant="contained" disabled={bulkDeleteLoading}>
+                        {bulkDeleteLoading ? 'Eliminando...' : `Eliminar ${selectedIds.size}`}
                     </Button>
                 </DialogActions>
             </Dialog>

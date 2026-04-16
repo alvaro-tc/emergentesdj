@@ -140,7 +140,7 @@ const StudentProjectRegistration = () => {
             })
             .catch(err => {
                 setLoading(false);
-                const msg = err.response?.data?.error || 'Error al registrar proyecto';
+                const msg = err.response?.data?.error || 'Error al registrar actividad';
                 setSnackbar({ open: true, message: msg, severity: 'error' });
             });
     };
@@ -151,15 +151,15 @@ const StudentProjectRegistration = () => {
                 return (
                     <Grid container spacing={3}>
                         <Grid size={12}>
-                            <Typography variant="h5" sx={{ fontFamily: "'DM Serif Display', serif", color: C.text, fontSize: '1.4rem' }} gutterBottom>Seleccione un Proyecto</Typography>
+                            <Typography variant="h5" sx={{ fontFamily: "'DM Serif Display', serif", color: C.text, fontSize: '1.4rem' }} gutterBottom>Seleccione una Actividad</Typography>
                             <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }} paragraph>
-                                Elija la materia y proyecto al que desea inscribirse.
+                                Elija la materia y actividad a la que desea inscribirse.
                             </Typography>
                         </Grid>
                         {availableProjects.length === 0 ? (
                             <Grid size={12}>
                                 <Alert severity="info" sx={{ background: C.purpleDim, color: C.purple, border: `1px solid ${C.purple}40`, '& .MuiAlert-icon': { color: C.purple } }}>
-                                    No hay proyectos abiertos para registro en este momento.
+                                    No hay actividades abiertas para registro en este momento.
                                 </Alert>
                             </Grid>
                         ) : (
@@ -313,9 +313,9 @@ const StudentProjectRegistration = () => {
                             <IconCheck size={64} style={{ color: C.green, marginBottom: 16 }} />
                             <Typography variant="h3" gutterBottom sx={{ color: C.purple, fontFamily: "'DM Serif Display', serif" }}>¡Registro Exitoso!</Typography>
                             <Typography variant="h5" sx={{ color: C.text }} paragraph>El grupo <strong>{projectName}</strong> ha sido registrado correctamente.</Typography>
-                            <Typography variant="body1" sx={{ color: C.textMuted }}>NOTA: Guarde el ID de su proyecto si es necesario: {successData?.project_id}</Typography>
+                            <Typography variant="body1" sx={{ color: C.textMuted }}>NOTA: Guarde el ID de su actividad si es necesario: {successData?.project_id}</Typography>
                             <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
-                                <Button variant="outlined" onClick={() => { setSuccessData(null); setActiveStep(0); setSelectedProject(null); setMembers([]); setLeaderCi(''); setProjectName(''); }} sx={{ color: C.text, borderColor: C.border, '&:hover': { background: C.borderLight } }}>Registrar Otro Proyecto</Button>
+                                <Button variant="outlined" onClick={() => { setSuccessData(null); setActiveStep(0); setSelectedProject(null); setMembers([]); setLeaderCi(''); setProjectName(''); }} sx={{ color: C.text, borderColor: C.border, '&:hover': { background: C.borderLight } }}>Registrar Otra Actividad</Button>
                                 <Button variant="contained" href="/" sx={{ borderRadius: 2, px: 4, fontWeight: 600, background: `linear-gradient(135deg, ${C.purple} 0%, ${C.purpleLight} 100%)`, color: '#fff', '&:hover': { filter: 'brightness(1.1)' } }}>Volver al Inicio</Button>
                             </Box>
                         </Grid>
@@ -337,14 +337,14 @@ const StudentProjectRegistration = () => {
                     <Grid size={{ xs: 12, md: 10, lg: 9 }}>
                         <Box sx={{ p: { xs: 3, md: 5 }, background: C.surface, border: `1px solid ${C.border}`, borderRadius: '24px', boxShadow: `0 24px 64px ${C.frameShadow}` }}>
                             <Typography sx={{ fontFamily: "'DM Serif Display', serif", fontSize: { xs: '2rem', md: '2.5rem' }, color: C.text, textAlign: 'center', mb: 1 }}>
-                                Registro de Proyectos
+                                Registro de Actividades
                             </Typography>
                             <Typography sx={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1rem', color: C.textMuted, textAlign: 'center', mb: 5 }}>
                                 Inscribe a tu grupo en las asignaturas disponibles
                             </Typography>
 
                             <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 6, '& .MuiStepLabel-label': { color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }, '& .MuiStepIcon-root': { color: C.border }, '& .MuiStepIcon-root.Mui-active': { color: C.purple }, '& .MuiStepIcon-root.Mui-completed': { color: C.green } }}>
-                                <Step key="Select"><StepLabel>Seleccionar Proyecto</StepLabel></Step>
+                                <Step key="Select"><StepLabel>Seleccionar Actividad</StepLabel></Step>
                                 <Step key="Form"><StepLabel>Datos del Grupo</StepLabel></Step>
                                 <Step key="Confirm"><StepLabel>Confirmación</StepLabel></Step>
                             </Stepper>
