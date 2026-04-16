@@ -72,11 +72,12 @@ ENV/
 env.bak/
 venv.bak/
 
+
 # Media files
 media/
 static_files/
 api-server-django/staticfiles/
-
+api-server-django/course_images/
 # IDE / Editor
 .vscode/
 .idea/
