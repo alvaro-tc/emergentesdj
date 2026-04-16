@@ -254,22 +254,29 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             
             elif filename.endswith('.xlsx'):
                 import openpyxl
-                wb = openpyxl.load_workbook(file, data_only=True)
-                sheet = wb.active
                 # Scan first 50 rows for header
                 header_row_idx = 0
                 headers = []
                 found_header = False
                 import re
-                
+
                 target_headers = [
                     'ci', 'carnet', 'cedula', 'documento', 'c.i.', 'c.i', 'ci_number',
                     'paterno', 'apellido paterno', 'apellido_paterno', 'apellido 1',
                     'nombre', 'nombres', 'nombre completo', 'nombres y apellidos', 'estudiante', 'apellidos y nombres'
                 ]
-                
-                rows_iter = list(sheet.iter_rows(values_only=True))
-                for i, row in enumerate(rows_iter[:50]):
+
+                # Use read_only=True to stream rows without loading entire file into RAM
+                wb = openpyxl.load_workbook(file, data_only=True, read_only=True)
+                sheet = wb.active
+                all_rows = []
+                for row in sheet.iter_rows(values_only=True):
+                    all_rows.append(row)
+                    if len(all_rows) > 10000:  # safety cap
+                        break
+                wb.close()
+
+                for i, row in enumerate(all_rows[:50]):
                    # Normalize headers
                    row_strs = [re.sub(r'\s+', ' ', str(c).strip().lower()) if c else '' for c in row]
                    if any(h in row_strs for h in target_headers):
@@ -277,11 +284,11 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                        header_row_idx = i
                        found_header = True
                        break
-                
+
                 if not found_header:
                     return Response({"error": "Could not find valid headers (CI, Paterno, Nombres)"}, status=status.HTTP_400_BAD_REQUEST)
 
-                rows = rows_iter[header_row_idx+1:]
+                rows = all_rows[header_row_idx+1:]
             
             else:
                  return Response({"error": "Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
@@ -407,69 +414,95 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         """
         Enroll a list of student IDs into a course.
         Also creates new students if provided in 'students_to_create' list.
+        Uses bulk operations to handle 200+ students efficiently on low-memory servers.
         """
-        student_ids = request.data.get('student_ids', [])
+        from django.db import transaction
+        import hashlib
+
+        student_ids = list(request.data.get('student_ids', []))
         students_to_create = request.data.get('students_to_create', [])
         course_id = request.data.get('course_id')
 
         if not course_id:
             return Response({"error": "Course ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             course = models.Course.objects.get(id=course_id)
         except models.Course.DoesNotExist:
             return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
 
         created_users_count = 0
-        
-        # 1. Create new students
-        for s_data in students_to_create:
-            ci = s_data.get('ci_number')
-            if not ci: continue
-            
-            # Check if already exists (double check)
-            if User.objects.filter(ci_number=ci).exists():
-                user = User.objects.get(ci_number=ci)
-                student_ids.append(user.id)
-                continue
-            
-            try:
-                # Use manager create_user
-                email = s_data.get('email') or None
-                # Check email conflict
-                if email and User.objects.filter(email=email).exists():
-                     email = None # Unset email if conflict, prioritize creation
-                
-                new_user = User.objects.create_user(
-                    email=email,
-                    password=ci, # Default password is CI
-                    role='STUDENT',
-                    ci_number=ci,
-                    first_name=s_data.get('first_name', ''),
-                    paternal_surname=s_data.get('paternal_surname', ''),
-                    maternal_surname=s_data.get('maternal_surname', ''),
-                    phone=s_data.get('phone', '')
-                )
-                student_ids.append(new_user.id)
-                created_users_count += 1
-            except Exception as e:
-                print(f"Error creating user {ci}: {e}")
 
-        # 2. Enroll all
+        # 1. Batch-resolve new students — avoid N individual queries
+        if students_to_create:
+            cis_to_create = [s.get('ci_number') for s in students_to_create if s.get('ci_number')]
+            # Single query to find which CIs already exist
+            existing_by_ci = {
+                u.ci_number: u
+                for u in User.objects.filter(ci_number__in=cis_to_create)
+            }
+            # Single query to find conflicting emails
+            emails_to_check = [s.get('email') for s in students_to_create if s.get('email')]
+            existing_emails = set(
+                User.objects.filter(email__in=emails_to_check).values_list('email', flat=True)
+            ) if emails_to_check else set()
+
+            with transaction.atomic():
+                for s_data in students_to_create:
+                    ci = s_data.get('ci_number')
+                    if not ci:
+                        continue
+                    if ci in existing_by_ci:
+                        student_ids.append(existing_by_ci[ci].id)
+                        continue
+                    try:
+                        email = s_data.get('email') or None
+                        if email and email in existing_emails:
+                            email = None
+                        new_user = User.objects.create_user(
+                            email=email,
+                            password=ci,
+                            role='STUDENT',
+                            ci_number=ci,
+                            first_name=s_data.get('first_name', ''),
+                            paternal_surname=s_data.get('paternal_surname', ''),
+                            maternal_surname=s_data.get('maternal_surname', ''),
+                            phone=s_data.get('phone', '')
+                        )
+                        student_ids.append(new_user.id)
+                        created_users_count += 1
+                        if email:
+                            existing_emails.add(email)
+                    except Exception as e:
+                        print(f"Error creating user {ci}: {e}")
+
+        # 2. Bulk enroll — single INSERT with ignore_conflicts instead of N get_or_create calls
+        student_ids = list(set(student_ids))
         enrolled_count = 0
-        student_ids = list(set(student_ids)) # Unique
-        
-        for student_id in student_ids:
-            try:
-                student = User.objects.get(id=student_id)
-                _, created = models.Enrollment.objects.get_or_create(student=student, course=course)
-                if created:
-                    enrolled_count += 1
-            except User.DoesNotExist:
-                continue
+
+        if student_ids:
+            # Single query to find which students are already enrolled
+            already_enrolled_ids = set(
+                models.Enrollment.objects.filter(
+                    course=course, student_id__in=student_ids
+                ).values_list('student_id', flat=True)
+            )
+            new_ids = [sid for sid in student_ids if sid not in already_enrolled_ids]
+
+            if new_ids:
+                # Single query to validate student IDs exist
+                valid_students = User.objects.filter(id__in=new_ids).only('id')
+                enrollments_to_create = [
+                    models.Enrollment(student=s, course=course)
+                    for s in valid_students
+                ]
+                created = models.Enrollment.objects.bulk_create(
+                    enrollments_to_create, ignore_conflicts=True
+                )
+                enrolled_count = len(created)
 
         return Response({
-            "status": "success", 
+            "status": "success",
             "enrolled_count": enrolled_count,
             "created_users_count": created_users_count
         }, status=status.HTTP_200_OK)
