@@ -54,6 +54,8 @@ const UsersStudents     = Loadable(lazy(() => import('../views/pages/users/Stude
 const UsersTeachers     = Loadable(lazy(() => import('../views/pages/users/Teachers')));
 const AccountSettings   = Loadable(lazy(() => import('../views/pages/account/AccountSettings')));
 const SamplePage        = Loadable(lazy(() => import('../views/sample-page')));
+const GroupRegistration = Loadable(lazy(() => import('../views/pages/student/GroupRegistration')));
+const StudentGroups     = Loadable(lazy(() => import('../views/pages/student/StudentGroups')));
 
 // Layout wrappers
 const ProtectedLayout = () => (
@@ -135,6 +137,8 @@ const Routes = () =>
                     { path: '/users/teachers',        element: <UsersTeachers /> },
                     { path: '/account-settings',      element: <AccountSettings /> },
                     { path: '/sample-page',           element: <SamplePage /> },
+                    { path: '/academic/register-group', element: <GroupRegistration /> },
+                    { path: '/academic/my-groups',      element: <StudentGroups /> },
                 ],
             }],
         },

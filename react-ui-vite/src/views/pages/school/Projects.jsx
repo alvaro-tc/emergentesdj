@@ -130,7 +130,7 @@ const Projects = () => {
             axios.get(`${config.API_SERVER}course-sub-criteria/?course=${activeCourse.id}`),
             axios.get(`${config.API_SERVER}projects/?course=${activeCourse.id}`)
         ]).then(([enrollRes, subCritRes, projRes]) => {
-            setEnrollments(enrollRes.data);
+            setEnrollments(Array.isArray(enrollRes.data) ? enrollRes.data : (enrollRes.data.results ?? []));
             setSubCriteria(subCritRes.data);
             setProjects(projRes.data);
 

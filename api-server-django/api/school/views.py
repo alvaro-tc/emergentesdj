@@ -1,5 +1,6 @@
 from rest_framework import viewsets, permissions, status, parsers
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from . import models
 from . import serializers
@@ -204,26 +205,55 @@ class CourseViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class EnrollmentPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 200
+
+
 class EnrollmentViewSet(viewsets.ModelViewSet):
     queryset = models.Enrollment.objects.all()
     serializer_class = serializers.EnrollmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = EnrollmentPagination
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.EnrollmentListSerializer
+        return serializers.EnrollmentSerializer
 
     def get_queryset(self):
-        queryset = models.Enrollment.objects.all()
+        queryset = models.Enrollment.objects.select_related('student', 'course')
         user = self.request.user
-        
+
         if user.role == 'STUDENT':
             queryset = queryset.filter(student=user)
         elif user.role == 'PARENT':
             queryset = queryset.filter(student__parent_relationships__parent=user)
-        
-        # Allow filtering by course for admin/teachers
+
         course_id = self.request.query_params.get('course')
         if course_id:
             queryset = queryset.filter(course_id=course_id)
-            
-        return queryset.order_by('student__paternal_surname', 'student__maternal_surname', 'student__first_name')
+
+        student_id = self.request.query_params.get('student')
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(student__ci_number__icontains=search) |
+                Q(student__first_name__icontains=search) |
+                Q(student__paternal_surname__icontains=search) |
+                Q(student__maternal_surname__icontains=search) |
+                Q(student__email__icontains=search)
+            )
+
+        return queryset.order_by(
+            'student__paternal_surname',
+            'student__maternal_surname',
+            'student__first_name',
+        )
 
     @action(detail=False, methods=['post'])
     def preview_bulk_upload(self, request):
@@ -293,79 +323,90 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             else:
                  return Response({"error": "Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map headers
+            # ---------- Mapeo de columnas ----------
+            # Separamos "nombre" (primer nombre individual) de "nombre completo" (nombre completo en un solo campo)
             col_map = {}
             for idx, h in enumerate(headers):
-                if h in ['ci', 'carnet', 'cedula', 'ci_number', 'documento', 'c.i.', 'c.i']: col_map['ci'] = idx
-                elif h in ['paterno', 'apellido paterno', 'apellido_paterno', 'apellido 1']: col_map['paterno'] = idx
-                elif h in ['materno', 'apellido materno', 'apellido_materno', 'apellido 2']: col_map['materno'] = idx
-                elif h in ['nombre', 'nombres', 'nombre completo', 'nombres y apellidos', 'estudiante', 'apellidos y nombres']: col_map['full_name'] = idx
-                elif h in ['email', 'correo', 'correo electronico']: col_map['email'] = idx
-                elif h in ['celular', 'telefono', 'phone', 'cel']: col_map['phone'] = idx
-
-            # Fallback
-            for idx, h in enumerate(headers):
-                 if h == 'nombres': col_map['nombres_only'] = idx
+                if h in ['ci', 'carnet', 'cedula', 'ci_number', 'documento', 'c.i.', 'c.i']:
+                    col_map['ci'] = idx
+                elif h in ['paterno', 'apellido paterno', 'apellido_paterno', 'apellido 1']:
+                    col_map['paterno'] = idx
+                elif h in ['materno', 'apellido materno', 'apellido_materno', 'apellido 2']:
+                    col_map['materno'] = idx
+                elif h in ['nombre', 'nombres']:
+                    # Columna de primer nombre (cuando hay apellidos separados)
+                    col_map['primer_nombre'] = idx
+                elif h in ['nombre completo', 'nombres y apellidos', 'estudiante', 'apellidos y nombres']:
+                    # Columna con nombre completo en un solo campo
+                    col_map['nombre_completo'] = idx
+                elif h in ['email', 'correo', 'correo electronico']:
+                    col_map['email'] = idx
+                elif h in ['celular', 'telefono', 'phone', 'cel']:
+                    col_map['phone'] = idx
 
             if 'ci' not in col_map:
-                 return Response({"error": f"Missing CI column. Found: {headers}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Missing CI column. Found: {headers}"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # ¿Tiene columnas de apellido separadas?
+            has_separate_names = 'paterno' in col_map
 
             seen_cis = set()
             import re
 
             for row in rows:
                 if not row: continue
-                # Handle list from CSV or tuple from Excel
                 row_vals = [str(c).strip() if c is not None else '' for c in row]
-                
-                if len(row_vals) <= max(col_map.values()): continue # skip short rows
+
+                if len(row_vals) <= max(col_map.values()): continue
 
                 raw_ci = row_vals[col_map['ci']]
-                # Clean CI: keep only digits
                 ci = re.sub(r'\D', '', raw_ci)
-
-                if not ci: continue
-                
-                if ci in seen_cis: continue
+                if not ci or ci in seen_cis: continue
                 seen_cis.add(ci)
-                
-                email = row_vals[col_map['email']] if 'email' in col_map else ''
-                phone = row_vals[col_map['phone']] if 'phone' in col_map else ''
-                
-                p_surname = row_vals[col_map['paterno']] if 'paterno' in col_map else ''
-                m_surname = row_vals[col_map['materno']] if 'materno' in col_map else ''
-                first_name = row_vals[col_map['nombres_only']] if 'nombres_only' in col_map else ''
 
-                # Logic for Full Name parsing
-                if 'full_name' in col_map and (not p_surname or not first_name):
-                    full_name_str = row_vals[col_map['full_name']]
-                    parts = full_name_str.split()
+                email = row_vals[col_map['email']].strip() if 'email' in col_map else ''
+                phone = row_vals[col_map['phone']].strip() if 'phone' in col_map else ''
+
+                if has_separate_names:
+                    # Columnas separadas: Paterno | Materno | Nombre
+                    p_surname = row_vals[col_map['paterno']].strip() if 'paterno' in col_map else ''
+                    m_surname = row_vals[col_map['materno']].strip() if 'materno' in col_map else ''
+                    first_name = row_vals[col_map['primer_nombre']].strip() if 'primer_nombre' in col_map else ''
+                    # Convertir a Title Case (maneja MAYÚSCULAS del Excel)
+                    p_surname = p_surname.title()
+                    m_surname = m_surname.title()
+                    first_name = first_name.title()
+                else:
+                    # Nombre completo en un solo campo: "RIVERA CHAVEZ JUAN"
+                    raw = ''
+                    if 'nombre_completo' in col_map:
+                        raw = row_vals[col_map['nombre_completo']].strip()
+                    elif 'primer_nombre' in col_map:
+                        raw = row_vals[col_map['primer_nombre']].strip()
+                    parts = raw.split()
                     if len(parts) >= 3:
-                         # "RIVERA CHAVEZ JUAN" -> Paterno: Rivera, Materno: Chavez, Nombre: Juan
-                         p_surname = parts[0]
-                         m_surname = parts[1]
-                         first_name = " ".join(parts[2:])
+                        p_surname = parts[0].title()
+                        m_surname = parts[1].title()
+                        first_name = ' '.join(parts[2:]).title()
                     elif len(parts) == 2:
-                         # "RIVERA JUAN" -> Paterno: Rivera, Nombre: Juan
-                         p_surname = parts[0]
-                         first_name = parts[1]
+                        p_surname = parts[0].title()
+                        m_surname = ''
+                        first_name = parts[1].title()
                     elif len(parts) == 1:
-                         p_surname = parts[0]
-                    
-                    if p_surname: p_surname = p_surname.title()
-                    if m_surname: m_surname = m_surname.title()
-                    if first_name: first_name = first_name.title()
+                        p_surname = parts[0].title()
+                        m_surname = ''
+                        first_name = ''
+                    else:
+                        p_surname = m_surname = first_name = ''
 
-                student_data = {
+                students_found.append({
                     'ci_number': ci,
                     'paternal_surname': p_surname,
                     'maternal_surname': m_surname,
                     'first_name': first_name,
                     'email': email,
-                    'phone': phone
-                }
-                
-                students_found.append(student_data)
+                    'phone': phone,
+                })
 
         except Exception as e:
             import traceback
@@ -436,29 +477,48 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         # 1. Batch-resolve new students — avoid N individual queries
         if students_to_create:
             cis_to_create = [s.get('ci_number') for s in students_to_create if s.get('ci_number')]
-            # Single query to find which CIs already exist
             existing_by_ci = {
                 u.ci_number: u
                 for u in User.objects.filter(ci_number__in=cis_to_create)
             }
-            # Single query to find conflicting emails
+            # Incluir tanto emails reales como CIs usados como email (norma del sistema)
             emails_to_check = [s.get('email') for s in students_to_create if s.get('email')]
             existing_emails = set(
-                User.objects.filter(email__in=emails_to_check).values_list('email', flat=True)
-            ) if emails_to_check else set()
+                User.objects.filter(email__in=emails_to_check + cis_to_create).values_list('email', flat=True)
+            )
 
             with transaction.atomic():
                 for s_data in students_to_create:
                     ci = s_data.get('ci_number')
                     if not ci:
                         continue
+
                     if ci in existing_by_ci:
-                        student_ids.append(existing_by_ci[ci].id)
+                        # CI ya existe: actualizar los datos del usuario desde el Excel
+                        existing_user = existing_by_ci[ci]
+                        update_fields = []
+                        for field in ('first_name', 'paternal_surname', 'maternal_surname', 'phone'):
+                            val = (s_data.get(field) or '').strip()
+                            if val and getattr(existing_user, field, '') != val:
+                                setattr(existing_user, field, val)
+                                update_fields.append(field)
+                        new_email = (s_data.get('email') or '').strip()
+                        if new_email and new_email != existing_user.email and new_email not in existing_emails:
+                            existing_user.email = new_email
+                            existing_emails.add(new_email)
+                            update_fields.append('email')
+                        if update_fields:
+                            existing_user.save(update_fields=update_fields)
+                        student_ids.append(existing_user.id)
                         continue
+
                     try:
-                        email = s_data.get('email') or None
+                        email = (s_data.get('email') or '').strip() or None
                         if email and email in existing_emails:
                             email = None
+                        # Sin email: usar el CI como credencial de acceso (norma del sistema)
+                        if not email:
+                            email = ci
                         new_user = User.objects.create_user(
                             email=email,
                             password=ci,
@@ -471,8 +531,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                         )
                         student_ids.append(new_user.id)
                         created_users_count += 1
-                        if email:
-                            existing_emails.add(email)
+                        existing_emails.add(email)
                     except Exception as e:
                         print(f"Error creating user {ci}: {e}")
 
@@ -562,6 +621,7 @@ class ReportViewSet(viewsets.ViewSet):
         from django.db.models import Count, Avg, Sum
         from django.utils import timezone
         from datetime import timedelta
+        from decimal import Decimal
 
         user = request.user
         data = {'role': user.role}
@@ -674,9 +734,7 @@ class ReportViewSet(viewsets.ViewSet):
             # My Courses List (All enrolled courses with images)
             data['enrolled_courses'] = []
             
-            # Filter by active courses to match Header logic
-            # Also ensures we don't crash on weird data
-            active_enrollments = my_enrollments.filter(course__active=True).select_related('course', 'course__subject', 'course__teacher', 'course__period')
+            active_enrollments = my_enrollments.select_related('course', 'course__subject', 'course__teacher', 'course__period')
             
             print(f"Dashboard Stats: Found {active_enrollments.count()} active enrollments for user {user.email}")
 
@@ -801,7 +859,7 @@ class ReportViewSet(viewsets.ViewSet):
                              
                              if total_weight > 0:
                                  # raw_avg is Decimal
-                                 raw_avg = weighted_sum / total_weight
+                                 raw_avg = Decimal(weighted_sum) / Decimal(total_weight)
                                  # Ensure spec.percentage is Decimal
                                  final_score = raw_avg * spec.percentage
                              else:
@@ -1506,60 +1564,55 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
         """
         List sub-criteria that are open for project registration.
         Optional filter: ?course_id=123
+        If authenticated, includes already_registered and my_project_id per entry.
         """
         course_id = request.query_params.get('course_id')
         queryset = models.CourseSubCriterion.objects.filter(is_project_registration_open=True)
-        
+
         if course_id:
             queryset = queryset.filter(course_id=course_id)
-            
-        # Add current status regarding dates
+
+        # Build registration map for authenticated students
+        registered_map = {}
+        if request.user and request.user.is_authenticated:
+            try:
+                enrollment_qs = models.Enrollment.objects.filter(student=request.user)
+                if course_id:
+                    enrollment_qs = enrollment_qs.filter(course_id=course_id)
+                enrollment_ids = list(enrollment_qs.values_list('id', flat=True))
+                if enrollment_ids:
+                    registered_projects = models.Project.objects.filter(
+                        sub_criterion__in=queryset,
+                        members__id__in=enrollment_ids
+                    ).values('sub_criterion_id', 'id')
+                    for rp in registered_projects:
+                        registered_map[rp['sub_criterion_id']] = rp['id']
+            except Exception:
+                pass
+
         now = timezone.now()
-        print(f"DEBUG: Current Server Time (now): {now}")
         data = []
         for sc in queryset:
-            # Check if active based on dates
             is_active_time = True
-            print(f"DEBUG: Checking Criterion {sc.name} (ID: {sc.id})")
-            print(f"DEBUG: Start: {sc.registration_start}, End: {sc.registration_end}")
-            
             if sc.registration_start and now < sc.registration_start:
-                print(f"DEBUG: INACTIVE - now < start")
                 is_active_time = False
             if sc.registration_end and now > sc.registration_end:
-                print(f"DEBUG: INACTIVE - now > end")
                 is_active_time = False
-            
-            print(f"DEBUG: Result is_active_time: {is_active_time}")
 
-            # Serialize course details with nested subject
             course_data = None
             if sc.course:
-                print(f"DEBUG: Course found: {sc.course}")
-                print(f"DEBUG: Course ID: {sc.course.id}, Parallel: {sc.course.parallel}")
-                
                 subject_data = None
                 if sc.course.subject:
-                    print(f"DEBUG: Subject found: {sc.course.subject}")
-                    print(f"DEBUG: Subject ID: {sc.course.subject.id}")
-                    print(f"DEBUG: Subject name: {sc.course.subject.name}")
-                    print(f"DEBUG: Subject code: {sc.course.subject.code}")
-                    
                     subject_data = {
                         'id': sc.course.subject.id,
                         'name': sc.course.subject.name,
                         'code': sc.course.subject.code
                     }
-                else:
-                    print(f"DEBUG: No subject found for course {sc.course.id}")
-                
                 course_data = {
                     'id': sc.course.id,
                     'parallel': sc.course.parallel,
                     'subject_details': subject_data
                 }
-            else:
-                print(f"DEBUG: No course found for sub-criterion {sc.id}")
 
             data.append({
                 'id': sc.id,
@@ -1567,13 +1620,13 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
                 'course_name': str(sc.course),
                 'course_details': course_data,
                 'max_members': sc.max_members,
-                'description': f"Project for {sc.name}",
+                'description': f"Proyecto grupal: {sc.name}",
                 'registration_start': sc.registration_start,
                 'registration_end': sc.registration_end,
-                'is_active_time': is_active_time
+                'is_active_time': is_active_time,
+                'already_registered': sc.id in registered_map,
+                'my_project_id': registered_map.get(sc.id)
             })
-            
-            print(f"DEBUG: Added project data with course_details: {data[-1]}")
         return Response(data)
 
     @action(detail=False, methods=['get'])
@@ -1677,26 +1730,81 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
                 except models.Enrollment.DoesNotExist:
                     return Response({'error': f'Student CI {ci} not enrolled'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 3. Create Project
+            # 3. Create Project with auto-assigned group number
+            group_number = models.Project.objects.filter(sub_criterion=sub_crit).count() + 1
             project = models.Project.objects.create(
                 course=sub_crit.course,
                 sub_criterion=sub_crit,
                 name=name,
                 description=description,
-                student_in_charge=leader_enrollment
+                student_in_charge=leader_enrollment,
+                group_number=group_number
             )
-            
+
             # Add members (Leader + Others)
             all_members = [leader_enrollment] + member_enrollments
             project.members.set(all_members)
             project.save()
 
-            return Response({'message': 'Project registered successfully', 'project_id': project.id}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Grupo registrado exitosamente', 'project_id': project.id, 'group_number': group_number}, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             import traceback
             traceback.print_exc()
             return Response({'error': f'Internal Server Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'])
+    def my_groups(self, request):
+        """
+        Returns all project groups the authenticated student belongs to for a given course.
+        Required: ?course_id=X
+        """
+        if not request.user or not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        course_id = request.query_params.get('course_id')
+        if not course_id:
+            return Response({'error': 'course_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            enrollment = models.Enrollment.objects.get(student=request.user, course_id=course_id)
+        except models.Enrollment.DoesNotExist:
+            return Response([])
+
+        projects = (
+            models.Project.objects
+            .filter(course_id=course_id, members=enrollment)
+            .select_related('sub_criterion', 'student_in_charge__student')
+            .prefetch_related('members__student')
+            .order_by('group_number', 'id')
+        )
+
+        data = []
+        for project in projects:
+            members_data = []
+            for member in project.members.all():
+                s = member.student
+                members_data.append({
+                    'enrollment_id': member.id,
+                    'full_name': f"{s.first_name} {s.paternal_surname or ''} {s.maternal_surname or ''}".strip(),
+                    'ci': s.ci_number,
+                    'is_leader': project.student_in_charge_id == member.id,
+                })
+
+            data.append({
+                'id': project.id,
+                'name': project.name,
+                'description': project.description,
+                'group_number': project.group_number,
+                'score': str(project.score) if project.score is not None else None,
+                'observations': project.observations,
+                'sub_criterion_id': project.sub_criterion_id,
+                'sub_criterion_name': project.sub_criterion.name,
+                'members': members_data,
+                'members_count': len(members_data),
+            })
+
+        return Response(data)
 
 class StudentCourseRegistrationViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -1756,47 +1864,35 @@ class RegistrationRequestViewSet(viewsets.ModelViewSet):
              return Response({'error': 'Solo se pueden aprobar solicitudes pendientes'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # 1. Find or Create User
-            user = None
-            try:
-                user = User.objects.get(ci_number=reg_req.ci)
-            except User.DoesNotExist:
-                pass
-            
-            if not user:
-                try:
-                    # User asked for email to be the CI. Check if user exists with this "email"
-                    user = User.objects.get(email=reg_req.ci)
-                except User.DoesNotExist:
-                    pass
+            from django.db import transaction
 
-            if not user:
-                # Create User
-                # "el correo es su numero de carnet y su contrasena es el mismo numero de carnet"
-                user = User.objects.create_user(
-                    email=reg_req.email, # Use the actual email provided by student
-                    password=reg_req.ci, 
-                    first_name=reg_req.first_name,
-                    paternal_surname=reg_req.paternal_surname,
-                    maternal_surname=reg_req.maternal_surname,
-                    ci_number=reg_req.ci,
-                    role='STUDENT'
+            with transaction.atomic():
+                # 1. Buscar usuario por CI; si no existe, crearlo
+                user = User.objects.filter(ci_number=reg_req.ci).first()
+
+                if not user:
+                    # Email: usar el proporcionado; si no hay, usar el CI como credencial
+                    login_email = (reg_req.email or '').strip() or reg_req.ci
+                    user = User.objects.create_user(
+                        email=login_email,
+                        password=reg_req.ci,
+                        first_name=reg_req.first_name,
+                        paternal_surname=reg_req.paternal_surname,
+                        maternal_surname=reg_req.maternal_surname,
+                        ci_number=reg_req.ci,
+                        role='STUDENT',
+                    )
+
+                # 2. Inscribir (get_or_create evita duplicados)
+                _, created = models.Enrollment.objects.get_or_create(
+                    student=user, course=reg_req.course
                 )
-                print(f"Created User {user.email} (CI) with password {reg_req.ci}")
 
-            # 2. Check Enrollment
-            if models.Enrollment.objects.filter(student=user, course=reg_req.course).exists():
-                 reg_req.status = 'APPROVED' # Already enrolled, just mark approved
-                 reg_req.save()
-                 return Response({'message': 'El estudiante ya estaba inscrito. Solicitud marcada como aprobada.'})
+                reg_req.status = 'APPROVED'
+                reg_req.save(update_fields=['status'])
 
-            # 3. Enroll
-            models.Enrollment.objects.create(student=user, course=reg_req.course)
-            
-            reg_req.status = 'APPROVED'
-            reg_req.save()
-            
-            return Response({'message': 'Estudiante inscrito correctamente'})
+            msg = 'Estudiante inscrito correctamente' if created else 'El estudiante ya estaba inscrito. Solicitud marcada como aprobada.'
+            return Response({'message': msg})
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

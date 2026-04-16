@@ -53,7 +53,7 @@ const MainLayout = ({ children }) => {
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
                     }),
-                    zIndex: { xs: theme.zIndex.appBar, md: theme.zIndex.modal + 1 },
+                    zIndex: { xs: theme.zIndex.appBar, md: theme.zIndex.drawer + 1 },
                 }}
             >
                 <Toolbar sx={{ minHeight: '40px', py: '4px' }}>

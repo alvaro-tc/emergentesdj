@@ -131,7 +131,8 @@ const RestLogin = ({ login, ...others }) => {
                                     if (response.data.requires_account_update) {
                                         setTempToken(response.data.token);
                                         const userEmail = response.data.user?.email;
-                                        if (userEmail) {
+                                        const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+                                        if (userEmail && isValidEmail(userEmail)) {
                                             setExistingEmail(userEmail);
                                             setUpdateData(prev => ({ ...prev, email: userEmail }));
                                         }

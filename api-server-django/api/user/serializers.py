@@ -90,10 +90,13 @@ class ProfileUpdateSerializer(serializers.Serializer):
 
 
 class UserCredentialsUpdateSerializer(serializers.Serializer):
-    email = serializers.EmailField(error_messages={
-        'required': 'Este campo es obligatorio.',
-        'invalid': 'Introduzca una dirección de correo electrónico válida.'
-    })
+    email = serializers.EmailField(
+        required=False,
+        allow_null=True,
+        error_messages={
+            'invalid': 'Introduzca una dirección de correo electrónico válida.'
+        }
+    )
     password = serializers.CharField(
         write_only=True, 
         required=True, 
@@ -104,27 +107,35 @@ class UserCredentialsUpdateSerializer(serializers.Serializer):
         }
     )
 
+    def _is_valid_email(self, value):
+        import re
+        return bool(value and re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', value))
+
     def validate_email(self, value):
+        if not value:
+            return None
         user = self.context['request'].user
         if User.objects.filter(email=value).exclude(pk=user.pk).exists():
             raise serializers.ValidationError("Este correo electrónico ya está en uso por otro usuario.")
         return value
 
-    def validate_password(self, value):
+    def validate(self, data):
         user = self.context['request'].user
-        
-        # Check against user attributes
-        if value.lower() == user.email.lower() if user.email else False:
-             raise serializers.ValidationError("La contraseña no puede ser igual a tu correo electrónico.")
-        
-        # Basic complexity check
+        email = data.get('email')
+        # Require a new valid email if the current one is missing or invalid (e.g. CI stored as email)
+        if not email and not self._is_valid_email(user.email):
+            raise serializers.ValidationError({'email': 'Este campo es obligatorio.'})
+        return data
+
+    def validate_password(self, value):
         if value.isdigit():
-             raise serializers.ValidationError("La contraseña no puede contener solo números.")
-        
+            raise serializers.ValidationError("La contraseña no puede contener solo números.")
         return value
 
     def update(self, instance, validated_data):
-        instance.email = validated_data['email']
+        email = validated_data.get('email')
+        if email:
+            instance.email = email
         instance.set_password(validated_data['password'])
         instance.save()
         return instance

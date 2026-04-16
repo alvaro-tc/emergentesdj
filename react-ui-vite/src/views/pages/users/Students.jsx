@@ -113,7 +113,7 @@ const Students = () => {
         if (!studentToDelete) return;
         try {
             axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-            await axios.delete(`${configData.API_SERVER}manage-users/${studentToDelete}`);
+            await axios.delete(`${configData.API_SERVER}manage-users/${studentToDelete}/`);
             fetchStudents();
             setOpenDeleteDialog(false);
             setStudentToDelete(null);

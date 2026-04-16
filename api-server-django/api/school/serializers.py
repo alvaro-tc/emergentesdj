@@ -83,10 +83,18 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.email', read_only=True)
     student_details = UserSerializer(source='student', read_only=True)
     course_details = CourseSerializer(source='course', read_only=True)
-    
+
     class Meta:
         model = models.Enrollment
         fields = '__all__'
+
+class EnrollmentListSerializer(serializers.ModelSerializer):
+    """Serializer ligero para el listado de inscripciones (sin course_details)."""
+    student_details = UserSerializer(source='student', read_only=True)
+
+    class Meta:
+        model = models.Enrollment
+        fields = ['id', 'student', 'course', 'date_enrolled', 'final_grade', 'student_details']
 
 class FamilyRelationshipSerializer(serializers.ModelSerializer):
     student_details = UserSerializer(source='student', read_only=True)

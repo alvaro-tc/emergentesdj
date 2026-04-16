@@ -48,8 +48,10 @@ const Enrollments = () => {
 
     // Table search + pagination
     const [tableSearch, setTableSearch] = useState('');
+    const [searchDebounced, setSearchDebounced] = useState('');
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Multi-select for bulk delete
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -79,12 +81,28 @@ const Enrollments = () => {
             .catch(error => console.error("Error fetching pending requests:", error));
     };
 
+    // Debounce búsqueda: esperar 400ms antes de lanzar la petición
+    useEffect(() => {
+        const timer = setTimeout(() => setSearchDebounced(tableSearch), 400);
+        return () => clearTimeout(timer);
+    }, [tableSearch]);
+
+    // Resetear página al cambiar búsqueda
+    useEffect(() => { setPage(0); }, [searchDebounced, activeCourse]);
+
     const fetchEnrollments = () => {
         if (!activeCourse) return;
         axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-        axios.get(`${configData.API_SERVER}enrollments/?course=${activeCourse.id}`)
+        const params = new URLSearchParams({
+            course: activeCourse.id,
+            page: page + 1,        // DRF usa índice 1-based
+            page_size: rowsPerPage,
+        });
+        if (searchDebounced) params.append('search', searchDebounced);
+        axios.get(`${configData.API_SERVER}enrollments/?${params.toString()}`)
             .then(response => {
-                setEnrollments(response.data);
+                setEnrollments(response.data.results);
+                setTotalCount(response.data.count);
             })
             .catch(error => {
                 console.error("Error fetching enrollments:", error);
@@ -97,7 +115,7 @@ const Enrollments = () => {
             fetchPendingRequests();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeCourse]);
+    }, [activeCourse, page, rowsPerPage, searchDebounced]);
 
     // Handle Student Search
     useEffect(() => {
@@ -277,7 +295,7 @@ const Enrollments = () => {
                     // 2. Check Enrollment Status
                     axios.get(`${configData.API_SERVER}enrollments/?student=${student.id}&course=${activeCourse.id}`)
                         .then(enrollResponse => {
-                            const isEnrolled = enrollResponse.data.length > 0;
+                            const isEnrolled = (enrollResponse.data.count ?? enrollResponse.data.length ?? 0) > 0;
 
                             const newStudent = {
                                 ...student,
@@ -422,8 +440,8 @@ const Enrollments = () => {
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip
                     icon={<IconUsers size="1rem" />}
-                    label={`${enrollments.length} estudiante${enrollments.length !== 1 ? 's' : ''} inscritos`}
-                    color={enrollments.length > 0 ? 'secondary' : 'default'}
+                    label={`${totalCount} estudiante${totalCount !== 1 ? 's' : ''} inscritos`}
+                    color={totalCount > 0 ? 'secondary' : 'default'}
                     variant="outlined"
                     size="small"
                 />
@@ -434,27 +452,11 @@ const Enrollments = () => {
                         <TableRow>
                             <TableCell padding="checkbox">
                                 <Checkbox
-                                    indeterminate={selectedIds.size > 0 && selectedIds.size < enrollments.filter(e => {
-                                        if (!tableSearch) return true;
-                                        const q = tableSearch.toLowerCase();
-                                        const s = e.student_details || {};
-                                        return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
-                                    }).length}
-                                    checked={enrollments.length > 0 && selectedIds.size === enrollments.filter(e => {
-                                        if (!tableSearch) return true;
-                                        const q = tableSearch.toLowerCase();
-                                        const s = e.student_details || {};
-                                        return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
-                                    }).length}
+                                    indeterminate={selectedIds.size > 0 && selectedIds.size < enrollments.length}
+                                    checked={enrollments.length > 0 && selectedIds.size === enrollments.length}
                                     onChange={(e) => {
-                                        const filtered = enrollments.filter(en => {
-                                            if (!tableSearch) return true;
-                                            const q = tableSearch.toLowerCase();
-                                            const s = en.student_details || {};
-                                            return (s.ci_number||'').toLowerCase().includes(q)||(s.paternal_surname||'').toLowerCase().includes(q)||(s.maternal_surname||'').toLowerCase().includes(q)||(s.first_name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
-                                        });
                                         if (e.target.checked) {
-                                            setSelectedIds(new Set(filtered.map(en => en.id)));
+                                            setSelectedIds(new Set(enrollments.map(en => en.id)));
                                         } else {
                                             setSelectedIds(new Set());
                                         }
@@ -472,34 +474,14 @@ const Enrollments = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {enrollments.filter(e => {
-                            if (!tableSearch) return true;
-                            const q = tableSearch.toLowerCase();
-                            const s = e.student_details || {};
-                            return (
-                                (s.ci_number || '').toLowerCase().includes(q) ||
-                                (s.paternal_surname || '').toLowerCase().includes(q) ||
-                                (s.maternal_surname || '').toLowerCase().includes(q) ||
-                                (s.first_name || '').toLowerCase().includes(q) ||
-                                (s.email || '').toLowerCase().includes(q)
-                            );
-                        }).length === 0 ? (
+                        {enrollments.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">No se encontraron estudiantes{tableSearch ? ` para "${tableSearch}"` : ''}.</TableCell>
+                                <TableCell colSpan={9} align="center">
+                                    No se encontraron estudiantes{searchDebounced ? ` para "${searchDebounced}"` : ''}.
+                                </TableCell>
                             </TableRow>
                         ) : (
-                            enrollments.filter(e => {
-                                if (!tableSearch) return true;
-                                const q = tableSearch.toLowerCase();
-                                const s = e.student_details || {};
-                                return (
-                                    (s.ci_number || '').toLowerCase().includes(q) ||
-                                    (s.paternal_surname || '').toLowerCase().includes(q) ||
-                                    (s.maternal_surname || '').toLowerCase().includes(q) ||
-                                    (s.first_name || '').toLowerCase().includes(q) ||
-                                    (s.email || '').toLowerCase().includes(q)
-                                );
-                            }).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((enrollment, index) => (
+                            enrollments.map((enrollment, index) => (
                                 <TableRow
                                     key={enrollment.id}
                                     selected={selectedIds.has(enrollment.id)}
@@ -538,23 +520,12 @@ const Enrollments = () => {
                 </Table>
             </TableContainer>
             <TablePagination
-                rowsPerPageOptions={[10, 25, 50, 100]}
+                rowsPerPageOptions={[25, 50, 100, 200]}
                 component="div"
-                count={enrollments.filter(e => {
-                    if (!tableSearch) return true;
-                    const q = tableSearch.toLowerCase();
-                    const s = e.student_details || {};
-                    return (
-                        (s.ci_number || '').toLowerCase().includes(q) ||
-                        (s.paternal_surname || '').toLowerCase().includes(q) ||
-                        (s.maternal_surname || '').toLowerCase().includes(q) ||
-                        (s.first_name || '').toLowerCase().includes(q) ||
-                        (s.email || '').toLowerCase().includes(q)
-                    );
-                }).length}
+                count={totalCount}
                 rowsPerPage={rowsPerPage}
                 page={page}
-                onPageChange={(e, newPage) => setPage(newPage)}
+                onPageChange={(_, newPage) => setPage(newPage)}
                 onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
                 labelRowsPerPage="Filas por página:"
             />
