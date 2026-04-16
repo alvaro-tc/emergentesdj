@@ -25,18 +25,18 @@ import CourseCard from './CourseCard';
 
 // ─── Features data ────────────────────────────────────────────────────────────
 const FEATURES = [
-    { icon: IconSchool,       num: '01', title: 'Gestión de Cursos',         desc: 'Administra inscripciones, materiales y paralelos de cada asignatura desde un panel centralizado.' },
-    { icon: IconClipboardList,num: '02', title: 'Proyectos Estudiantiles',   desc: 'Registra y da seguimiento a los avances de proyectos con control por etapas y criterios.' },
-    { icon: IconCertificate,  num: '03', title: 'Sistema de Evaluaciones',   desc: 'Plantillas flexibles, notas por criterio y cálculo automático del promedio final.' },
+    { icon: IconSchool, num: '01', title: 'Gestión de Cursos', desc: 'Administra inscripciones, materiales y paralelos de cada asignatura desde un panel centralizado.' },
+    { icon: IconClipboardList, num: '02', title: 'Proyectos Estudiantiles', desc: 'Registra y da seguimiento a los avances de proyectos con control por etapas y criterios.' },
+    { icon: IconCertificate, num: '03', title: 'Sistema de Evaluaciones', desc: 'Plantillas flexibles, notas por criterio y cálculo automático del promedio final.' },
 ];
 
 // ─── DiagramFrame ─────────────────────────────────────────────────────────────
 // Muestra el drawio PNG dentro de un marco tipo ventana de aplicación
 const DiagramFrame = ({ src, isDark }) => {
-    const C    = isDark ? DARK : LIGHT;
+    const C = isDark ? DARK : LIGHT;
     const [zoom, setZoom] = React.useState(1);
 
-    const handleZoomIn  = (e) => { e.stopPropagation(); setZoom(z => Math.min(z + 0.25, 2)); };
+    const handleZoomIn = (e) => { e.stopPropagation(); setZoom(z => Math.min(z + 0.25, 2)); };
     const handleZoomOut = (e) => { e.stopPropagation(); setZoom(z => Math.max(z - 0.25, 0.5)); };
 
     return (
@@ -219,8 +219,8 @@ const DiagramFrame = ({ src, isDark }) => {
 
 // ─── LandingPage ──────────────────────────────────────────────────────────────
 const LandingPage = () => {
-    const [courses,       setCourses]       = React.useState([]);
-    const [loading,       setLoading]       = React.useState(true);
+    const [courses, setCourses] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
     const [landingConfig, setLandingConfig] = React.useState(null);
 
     // ── Theme state (from shared LandingLayout) ──────────────────────────────
@@ -231,14 +231,14 @@ const LandingPage = () => {
             try {
                 const res = await axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`);
                 setCourses(res.data);
-            } catch {}
+            } catch { }
             finally { setLoading(false); }
         };
         const fetchConfig = async () => {
             try {
                 const res = await axios.get(`${configData.API_SERVER}landing-page-config/`);
                 setLandingConfig(res.data);
-            } catch {}
+            } catch { }
         };
         fetchCourses();
         fetchConfig();
@@ -268,7 +268,7 @@ const LandingPage = () => {
         pauseOnHover: true,
         responsive: [
             { breakpoint: 1024, settings: { slidesToShow: 2, slidesToScroll: 1, infinite: courses.length > 2 } },
-            { breakpoint: 768,  settings: { slidesToShow: 1, slidesToScroll: 1, infinite: courses.length > 1  } },
+            { breakpoint: 768, settings: { slidesToShow: 1, slidesToScroll: 1, infinite: courses.length > 1 } },
         ],
     };
 
@@ -451,21 +451,7 @@ const LandingPage = () => {
                             </Grid>
                         </Grid>
 
-                        {/* Section divider */}
-                        <Box sx={{ mt: { xs: 8, md: 10 }, display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ flex: 1, height: '1px', background: `linear-gradient(to right, transparent, ${C.border})` }} />
-                            <Typography sx={{
-                                fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: '0.62rem',
-                                letterSpacing: '0.2em',
-                                color: C.textMuted,
-                                textTransform: 'uppercase',
-                                whiteSpace: 'nowrap',
-                            }}>
-                                // cursos disponibles
-                            </Typography>
-                            <Box sx={{ flex: 1, height: '1px', background: `linear-gradient(to left, transparent, ${C.border})` }} />
-                        </Box>
+
                     </Container>
                 </Box>
 
@@ -474,8 +460,8 @@ const LandingPage = () => {
                 <Box sx={{ background: C.surface, py: { xs: 6, md: 10 }, transition: 'background 0.3s ease' }}>
                     <Container maxWidth="lg">
                         <Box sx={{ mb: { xs: 5, md: 7 }, textAlign: 'center' }}>
-                            <SectionLabel text="// Cursos Destacados" />
-                            <SectionHeading>Explora lo que ofrecemos</SectionHeading>
+                            <SectionLabel text="// Cursos Disponibles" />
+                            <SectionHeading>Explora los cursos</SectionHeading>
                         </Box>
 
                         {loading ? (

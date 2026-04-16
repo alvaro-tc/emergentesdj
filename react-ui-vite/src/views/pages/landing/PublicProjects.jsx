@@ -64,7 +64,7 @@ const PublicProjects = () => {
             <Container maxWidth="lg">
                 <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 8 } }}>
                     <Typography variant="h2" gutterBottom color="primary" sx={{ fontSize: { xs: '2rem', md: '3rem' }, fontWeight: 700 }}>
-                        Proyectos Disponibles
+                        Actividades Disponibles
                     </Typography>
                     <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 400, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                         Encuentra tu proyecto e inscribe a tu grupo

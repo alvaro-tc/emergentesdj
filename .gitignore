@@ -124,3 +124,7 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Claude
+package.json
+package-lock.json

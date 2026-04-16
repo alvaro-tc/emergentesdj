@@ -124,25 +124,6 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                 )}
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 'auto' }}>
-                    {course.whatsapp_link && (
-                        <Box component="a" href={course.whatsapp_link} target="_blank" rel="noopener noreferrer" sx={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75,
-                            textDecoration: 'none',
-                            py: 1.1,
-                            background: C.greenDim,
-                            border: `1px solid ${C.green}35`,
-                            borderRadius: '6px',
-                            color: C.green,
-                            fontFamily: "'DM Sans', sans-serif",
-                            fontWeight: 600,
-                            fontSize: '0.83rem',
-                            transition: 'all 0.2s',
-                            '&:hover': { background: `${C.green}28`, borderColor: C.green },
-                        }}>
-                            <IconBrandWhatsapp size={15} />
-                            Unirse al grupo
-                        </Box>
-                    )}
                     {course.platform_link && (
                         <Box component="a" href={course.platform_link} target="_blank" rel="noopener noreferrer" sx={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75,
@@ -162,7 +143,27 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                             Plataforma Virtual
                         </Box>
                     )}
-                    
+                    {course.whatsapp_link && (
+                        <Box component="a" href={course.whatsapp_link} target="_blank" rel="noopener noreferrer" sx={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75,
+                            textDecoration: 'none',
+                            py: 1.1,
+                            background: C.greenDim,
+                            border: `1px solid ${C.green}35`,
+                            borderRadius: '6px',
+                            color: C.green,
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontWeight: 600,
+                            fontSize: '0.83rem',
+                            transition: 'all 0.2s',
+                            '&:hover': { background: `${C.green}28`, borderColor: C.green },
+                        }}>
+                            <IconBrandWhatsapp size={15} />
+                            Unirse al grupo
+                        </Box>
+                    )}
+
+
                     {/* Render action slot (used in PublicCourses for 'Inscribirse' button) */}
                     {actions && (
                         <Box sx={{ mt: 1 }}>

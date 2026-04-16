@@ -11,7 +11,7 @@ const NAV_LINKS = [
     { label: 'Acerca de', to: '/about' },
     { label: 'Blog', to: '/blog' },
     { label: 'Publicaciones', to: '/publications' },
-    { label: 'Proyectos', to: '/project-registration' },
+    { label: 'Actividades', to: '/project-registration' },
 ];
 
 const LandingHeader = ({ isDark, onToggleTheme }) => {
@@ -29,25 +29,25 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
 
     // ── Dynamic colors ───────────────────────────────────────────────────────
     const C = isDark ? {
-        navBg:        'rgba(7, 12, 24, 0.88)',
-        drawerBg:     '#0c1020',
-        border:       '#1e1a3a',
-        purple:       '#8b5cf6',
-        purpleLight:  '#c4b5fd',
-        text:         '#e2dff0',
-        textMuted:    '#6b6888',
-        toggleBg:     '#1a1530',
-        toggleHover:  '#251f42',
+        navBg: 'rgba(7, 12, 24, 0.88)',
+        drawerBg: '#0c1020',
+        border: '#1e1a3a',
+        purple: '#8b5cf6',
+        purpleLight: '#c4b5fd',
+        text: '#e2dff0',
+        textMuted: '#6b6888',
+        toggleBg: '#1a1530',
+        toggleHover: '#251f42',
     } : {
-        navBg:        'rgba(250, 248, 255, 0.92)',
-        drawerBg:     '#ffffff',
-        border:       '#e0daf4',
-        purple:       '#6d28d9',
-        purpleLight:  '#8b5cf6',
-        text:         '#1c1033',
-        textMuted:    '#7566a0',
-        toggleBg:     '#ede8ff',
-        toggleHover:  '#e0d8ff',
+        navBg: 'rgba(250, 248, 255, 0.92)',
+        drawerBg: '#ffffff',
+        border: '#e0daf4',
+        purple: '#6d28d9',
+        purpleLight: '#8b5cf6',
+        text: '#1c1033',
+        textMuted: '#7566a0',
+        toggleBg: '#ede8ff',
+        toggleHover: '#e0d8ff',
     };
 
     return (
