@@ -161,6 +161,11 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = models.Project
         fields = '__all__'
 
+class PresentationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Presentation
+        fields = '__all__'
+
 class RegistrationRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.RegistrationRequest

@@ -48,6 +48,7 @@ router.register(r"criterion-scores", school_views.CriterionScoreViewSet, basenam
 router.register(r"course-tasks", school_views.CourseTaskViewSet, basename="course-tasks")
 router.register(r"task-scores", school_views.TaskScoreViewSet, basename="task-scores")
 router.register(r"projects", school_views.ProjectViewSet, basename="projects")
+router.register(r"presentations", school_views.PresentationViewSet, basename="presentations")
 
 # Blog
 from api.blog.views import BlogPostViewSet, BlogCategoryViewSet

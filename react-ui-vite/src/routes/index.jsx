@@ -54,8 +54,11 @@ const UsersStudents     = Loadable(lazy(() => import('../views/pages/users/Stude
 const UsersTeachers     = Loadable(lazy(() => import('../views/pages/users/Teachers')));
 const AccountSettings   = Loadable(lazy(() => import('../views/pages/account/AccountSettings')));
 const SamplePage        = Loadable(lazy(() => import('../views/sample-page')));
-const GroupRegistration = Loadable(lazy(() => import('../views/pages/student/GroupRegistration')));
-const StudentGroups     = Loadable(lazy(() => import('../views/pages/student/StudentGroups')));
+const GroupRegistration      = Loadable(lazy(() => import('../views/pages/student/GroupRegistration')));
+const StudentGroups          = Loadable(lazy(() => import('../views/pages/student/StudentGroups')));
+const Presentations          = Loadable(lazy(() => import('../views/pages/school/Presentations')));
+const PresentationForm       = Loadable(lazy(() => import('../views/pages/school/PresentationForm')));
+const PresentationViewer     = Loadable(lazy(() => import('../views/pages/school/PresentationViewer')));
 
 // Layout wrappers
 const ProtectedLayout = () => (
@@ -110,7 +113,10 @@ const Routes = () =>
         // ── Protected (redirect to /login if not authenticated) ───────────────
         {
             element: <AuthGuard />,
-            children: [{
+            children: [
+                // Fullscreen viewer — auth required but no dashboard layout
+                { path: '/present/:id', element: <PresentationViewer /> },
+            {
                 element: <ProtectedLayout />,
                 children: [
                     { path: '/dashboard/default',     element: <DashboardDefault /> },
@@ -137,8 +143,11 @@ const Routes = () =>
                     { path: '/users/teachers',        element: <UsersTeachers /> },
                     { path: '/account-settings',      element: <AccountSettings /> },
                     { path: '/sample-page',           element: <SamplePage /> },
-                    { path: '/academic/register-group', element: <GroupRegistration /> },
-                    { path: '/academic/my-groups',      element: <StudentGroups /> },
+                    { path: '/academic/register-group',        element: <GroupRegistration /> },
+                    { path: '/academic/my-groups',             element: <StudentGroups /> },
+                    { path: '/dashboard/presentations',        element: <Presentations /> },
+                    { path: '/dashboard/presentations/new',    element: <PresentationForm /> },
+                    { path: '/dashboard/presentations/:id/edit', element: <PresentationForm /> },
                 ],
             }],
         },

@@ -1552,6 +1552,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 except Exception as e:
                     print(f"Error updating final grade for {member.id} in project sync: {e}")
 
+class PresentationViewSet(viewsets.ModelViewSet):
+    queryset = models.Presentation.objects.all()
+    serializer_class = serializers.PresentationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = models.Presentation.objects.all()
+        subject_id = self.request.query_params.get('subject')
+        if subject_id:
+            qs = qs.filter(subject_id=subject_id)
+        return qs.order_by('-created_at')
+
 class StudentProjectRegistrationViewSet(viewsets.ViewSet):
     """
     View to handle student project registration.

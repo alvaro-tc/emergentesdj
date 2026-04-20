@@ -1,4 +1,4 @@
-import { IconUserPlus, IconPencil, IconListCheck, IconBulb, IconList, IconScale } from '@tabler/icons-react';
+import { IconUserPlus, IconPencil, IconListCheck, IconBulb, IconList, IconScale, IconPresentation } from '@tabler/icons-react';
 
 const icons = {
     IconUserPlus,
@@ -6,7 +6,8 @@ const icons = {
     IconListCheck,
     IconBulb,
     IconList,
-    IconScale
+    IconScale,
+    IconPresentation
 };
 
 export const school = {
@@ -36,6 +37,14 @@ export const school = {
             type: 'item',
             url: '/extras/projects',
             icon: icons.IconBulb,
+            breadcrumbs: false
+        },
+        {
+            id: 'presentations',
+            title: 'Presentaciones',
+            type: 'item',
+            url: '/dashboard/presentations',
+            icon: icons.IconPresentation,
             breadcrumbs: false
         },
         {

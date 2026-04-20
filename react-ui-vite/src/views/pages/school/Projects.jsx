@@ -40,7 +40,7 @@ import {
     Box,
     InputAdornment
 } from '@mui/material';
-import { IconPlus, IconTrash, IconUsers, IconUserCheck, IconTarget, IconSettings, IconAlertTriangle, IconFileExport, IconSearch, IconCrown, IconX } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconUsers, IconTarget, IconSettings, IconAlertTriangle, IconFileExport, IconSearch, IconCrown, IconX } from '@tabler/icons-react';
 // Rename or use directly
 import axios from 'axios';
 import config from '../../../config';
@@ -58,6 +58,7 @@ const Projects = () => {
     const [enrollments, setEnrollments] = useState([]);
     const [projects, setProjects] = useState([]);
     const [selectedSubCriterion, setSelectedSubCriterion] = useState('');
+    const [tableSearch, setTableSearch] = useState('');
 
     // Dialogs State
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -433,9 +434,23 @@ const Projects = () => {
     const subjectName = activeCourse ? (activeCourse.subject_details?.name || activeCourse.subject?.name || 'Materia') : '';
     const projectSubCriteria = subCriteria.filter(sc => sc.is_project);
 
-    const filteredProjects = selectedSubCriterion
+    const bySubCriterion = selectedSubCriterion
         ? projects.filter(p => p.sub_criterion === selectedSubCriterion)
         : projects;
+
+    const filteredProjects = tableSearch
+        ? bySubCriterion.filter(p => {
+            const q = tableSearch.toLowerCase();
+            if (String(p.id).includes(q)) return true;
+            if ((p.name || '').toLowerCase().includes(q)) return true;
+            if (p.member_details?.some(m => {
+                const sd = m.student_details;
+                return [sd?.paternal_surname, sd?.maternal_surname, sd?.first_name]
+                    .filter(Boolean).join(' ').toLowerCase().includes(q);
+            })) return true;
+            return false;
+        })
+        : bySubCriterion;
 
     if (!activeCourse) {
         return (
@@ -538,13 +553,41 @@ const Projects = () => {
                 </Card>
             </Grid>
             <Grid size={12}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            Grupos registrados:
+                        </Typography>
+                        <Chip
+                            label={`${bySubCriterion.length} total${tableSearch ? ` · ${filteredProjects.length} coinciden` : ''}`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                        />
+                    </Box>
+                    <TextField
+                        size="small"
+                        placeholder="Buscar por ID, nombre o miembro..."
+                        value={tableSearch}
+                        onChange={(e) => setTableSearch(e.target.value)}
+                        sx={{ width: 300 }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <IconSearch size={16} />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                </Box>
+            </Grid>
+            <Grid size={12}>
                 <TableContainer component={Paper}>
                     <Table>
                         <TableHead>
                             <TableRow>
                                 <TableCell>ID</TableCell>
                                 <TableCell>Nombre del Proyecto</TableCell>
-                                <TableCell>Líder</TableCell>
                                 <TableCell>Miembros</TableCell>
                                 <TableCell>
                                     {selectedSubCriterion ? (
@@ -569,28 +612,24 @@ const Projects = () => {
                                         <Typography variant="caption" color="textSecondary">{project.description}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        {project.leader_details ? (
-                                            <Chip
-                                                icon={<IconUserCheck size="1rem" />}
-                                                label={`${project.leader_details.student_details?.first_name} ${project.leader_details.student_details?.paternal_surname}`}
-                                                size="small"
-                                                color="primary"
-                                                variant="outlined"
-                                            />
-                                        ) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                            {project.member_details && project.member_details.map(mem => (
-                                                <Tooltip title={`${mem.student_details?.first_name} ${mem.student_details?.paternal_surname}`} key={mem.id}>
-                                                    <Avatar style={{ width: 24, height: 24, fontSize: '0.75rem' }}>
-                                                        {mem.student_details?.first_name?.[0]}{mem.student_details?.paternal_surname?.[0]}
-                                                    </Avatar>
-                                                </Tooltip>
-                                            ))}
-                                            <Typography variant="caption" style={{ alignSelf: 'center', marginLeft: 4 }}>
-                                                ({project.members.length})
-                                            </Typography>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            {project.member_details && project.member_details.map(mem => {
+                                                const isLeader = mem.id === project.student_in_charge;
+                                                const sd = mem.student_details;
+                                                const name = [sd?.paternal_surname, sd?.maternal_surname, sd?.first_name].filter(Boolean).join(' ');
+                                                return (
+                                                    <Typography
+                                                        key={mem.id}
+                                                        variant="caption"
+                                                        sx={{
+                                                            fontWeight: isLeader ? 700 : 400,
+                                                            color: isLeader ? 'primary.main' : 'text.primary',
+                                                        }}
+                                                    >
+                                                        {isLeader ? '★ ' : '· '}{name}
+                                                    </Typography>
+                                                );
+                                            })}
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -601,7 +640,7 @@ const Projects = () => {
                                     <TableCell>
                                         <Typography variant="caption">
                                             {project.created_at
-                                                ? new Date(project.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                ? new Date(project.created_at).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                                 : '-'}
                                         </Typography>
                                     </TableCell>
@@ -624,7 +663,7 @@ const Projects = () => {
                             ))}
                             {filteredProjects.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={6} align="center">
                                         {selectedSubCriterion
                                             ? 'No hay proyectos para este sub-criterio.'
                                             : 'No hay proyectos para este curso.'}
