@@ -219,6 +219,7 @@ class Project(models.Model):
     score = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     observations = models.TextField(blank=True, null=True)
     group_number = models.IntegerField(null=True, blank=True, help_text="Número de grupo auto-asignado por proyecto grupal")
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return self.name

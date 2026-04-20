@@ -8,21 +8,17 @@ import {
     TextField,
     Typography,
     Divider,
-    Paper,
     Button,
     Collapse,
     InputAdornment,
     Chip,
     Avatar,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
     Box,
     IconButton,
-    Stack
+    Stack,
+    Tooltip
 } from '@mui/material';
-import { IconPlus, IconX, IconSearch, IconUserCheck, IconUsers, IconStar, IconNotes } from '@tabler/icons-react';
+import { IconPlus, IconX, IconSearch, IconUsers, IconStar, IconNotes, IconCrown } from '@tabler/icons-react';
 
 const ManageProjectDialog = ({
     open,
@@ -30,6 +26,7 @@ const ManageProjectDialog = ({
     project,
     enrollments,
     unavailableStudentIds = [],
+    courseId,
     onSave,
 }) => {
     const [formData, setFormData] = useState({
@@ -43,7 +40,20 @@ const ManageProjectDialog = ({
     });
     const [showAddMembers, setShowAddMembers] = useState(false);
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
-    const [memberRemoveSearchQuery, setMemberRemoveSearchQuery] = useState('');
+
+    // Mapa de lookup: combina enrollments generales + member_details del proyecto
+    // para no depender de que todos los enrollments estén paginados en la lista global
+    const enrollmentMap = React.useMemo(() => {
+        const map = {};
+        enrollments.forEach(e => { map[e.id] = e; });
+        if (project?.member_details) {
+            project.member_details.forEach(e => { map[e.id] = e; });
+        }
+        if (project?.leader_details) {
+            map[project.leader_details.id] = project.leader_details;
+        }
+        return map;
+    }, [enrollments, project]);
 
     useEffect(() => {
         if (project && open) {
@@ -58,7 +68,6 @@ const ManageProjectDialog = ({
             });
             setShowAddMembers(false);
             setMemberSearchQuery('');
-            setMemberRemoveSearchQuery('');
         }
     }, [project, open]);
 
@@ -154,28 +163,12 @@ const ManageProjectDialog = ({
                         />
                     </Grid>
 
-                    <Grid size={12}>
-                        <TextField
-                            fullWidth
-                            label="Observaciones"
-                            name="observations"
-                            value={formData.observations}
-                            onChange={handleInputChange}
-                            variant="outlined"
-                            multiline
-                            rows={3}
-                            size="small"
-                            placeholder="Añada observaciones sobre el grupo o el desarrollo del proyecto..."
-                            helperText="Visible solo para el docente."
-                        />
-                    </Grid>
-
                     {/* ── Calificación ── */}
                     <Grid size={12}>
                         <SectionHeader icon={IconStar} title="Calificación" />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 5 }}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField
                             fullWidth
                             label={`Calificación (Máx: ${project?.maxScore || 100})`}
@@ -195,6 +188,22 @@ const ManageProjectDialog = ({
                         />
                     </Grid>
 
+                    <Grid size={{ xs: 12, sm: 8 }}>
+                        <TextField
+                            fullWidth
+                            label="Observaciones"
+                            name="observations"
+                            value={formData.observations}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            multiline
+                            rows={3}
+                            size="small"
+                            placeholder="Añada observaciones sobre el grupo o el desarrollo del proyecto..."
+                            helperText="Visible solo para el docente."
+                        />
+                    </Grid>
+
                     {/* ── Integrantes ── */}
                     <Grid size={12}>
                         <SectionHeader icon={IconUsers} title="Integrantes" />
@@ -202,31 +211,9 @@ const ManageProjectDialog = ({
 
                     {/* Current Members */}
                     <Grid size={12}>
-                        {formData.members.length > 0 && (
-                            <TextField
-                                fullWidth
-                                placeholder="Buscar integrante por nombre o CI para quitar..."
-                                variant="outlined"
-                                size="small"
-                                value={memberRemoveSearchQuery}
-                                onChange={(e) => setMemberRemoveSearchQuery(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <IconSearch size={16} />
-                                        </InputAdornment>
-                                    ),
-                                    endAdornment: memberRemoveSearchQuery ? (
-                                        <InputAdornment position="end">
-                                            <IconButton size="small" onClick={() => setMemberRemoveSearchQuery('')}>
-                                                <IconX size={14} />
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ) : null,
-                                }}
-                                sx={{ mb: 1 }}
-                            />
-                        )}
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                            Haz clic en un integrante para asignarlo como líder. El líder actual se muestra resaltado.
+                        </Typography>
                         <Box sx={{
                             border: '1px solid', borderColor: 'divider', borderRadius: 2,
                             p: 2, minHeight: 72, bgcolor: 'grey.50'
@@ -237,45 +224,32 @@ const ManageProjectDialog = ({
                                 </Typography>
                             ) : (
                                 <Stack direction="row" flexWrap="wrap" gap={1}>
-                                    {formData.members
-                                        .filter(memId => {
-                                            if (!memberRemoveSearchQuery) return true;
-                                            const mem = enrollments.find(e => e.id === memId);
-                                            if (!mem) return false;
-                                            const searchStr = `${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''} ${mem.student_details?.maternal_surname || ''} ${mem.student_details?.ci_number || ''}`.toLowerCase();
-                                            return searchStr.includes(memberRemoveSearchQuery.toLowerCase());
-                                        })
-                                        .map(memId => {
-                                            const mem = enrollments.find(e => e.id === memId);
-                                            if (!mem) return null;
-                                            const isLeader = formData.student_in_charge === memId;
-                                            return (
-                                                <Chip
-                                                    key={memId}
-                                                    avatar={mem.student_details?.first_name
-                                                        ? <Avatar sx={{ bgcolor: isLeader ? 'secondary.main' : 'primary.main' }}>
-                                                            {mem.student_details.first_name[0]}
-                                                          </Avatar>
-                                                        : undefined}
-                                                    label={`${mem.student_details?.ci_number ? mem.student_details.ci_number + ' · ' : ''}${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''}${isLeader ? ' · Líder' : ''}`}
-                                                    color={isLeader ? 'secondary' : 'primary'}
-                                                    onDelete={() => handleMemberToggle(memId)}
-                                                    variant={isLeader ? 'filled' : 'outlined'}
-                                                    icon={isLeader ? <IconUserCheck size={14} /> : undefined}
-                                                    size="small"
-                                                />
-                                            );
-                                        })}
-                                    {memberRemoveSearchQuery && formData.members.filter(memId => {
-                                        const mem = enrollments.find(e => e.id === memId);
-                                        if (!mem) return false;
-                                        const searchStr = `${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''} ${mem.student_details?.maternal_surname || ''} ${mem.student_details?.ci_number || ''}`.toLowerCase();
-                                        return searchStr.includes(memberRemoveSearchQuery.toLowerCase());
-                                    }).length === 0 && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            Sin resultados para "{memberRemoveSearchQuery}".
-                                        </Typography>
-                                    )}
+                                    {formData.members.map(memId => {
+                                        const mem = enrollmentMap[memId];
+                                        if (!mem) return null;
+                                        const isLeader = formData.student_in_charge === memId;
+                                        return (
+                                            <Chip
+                                                key={memId}
+                                                avatar={mem.student_details?.first_name
+                                                    ? <Avatar sx={{ bgcolor: isLeader ? 'secondary.main' : 'primary.main' }}>
+                                                        {mem.student_details.first_name[0]}
+                                                      </Avatar>
+                                                    : undefined}
+                                                label={`${mem.student_details?.ci_number ? mem.student_details.ci_number + ' · ' : ''}${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''}${isLeader ? ' · Líder' : ''}`}
+                                                color={isLeader ? 'secondary' : 'primary'}
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    student_in_charge: isLeader ? '' : memId
+                                                }))}
+                                                onDelete={() => handleMemberToggle(memId)}
+                                                variant={isLeader ? 'filled' : 'outlined'}
+                                                icon={isLeader ? <IconCrown size={14} /> : undefined}
+                                                size="small"
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
                                 </Stack>
                             )}
                         </Box>
@@ -317,26 +291,45 @@ const ManageProjectDialog = ({
                                 sx={{ mb: 1.5 }}
                             />
                             <Box sx={{
-                                maxHeight: 180, overflow: 'auto', p: 1.5,
+                                maxHeight: 220, overflow: 'auto', p: 1.5,
                                 border: '1px solid', borderColor: 'divider', borderRadius: 2
                             }}>
                                 <Stack direction="row" flexWrap="wrap" gap={1}>
-                                    {enrollments
-                                        .filter(e => !formData.members.includes(e.id))
-                                        .filter(e => {
-                                            if (!memberSearchQuery) return true;
-                                            const searchStr = `${e.student_details?.first_name || ''} ${e.student_details?.paternal_surname || ''} ${e.student_details?.maternal_surname || ''} ${e.student_details?.ci_number || ''}`.toLowerCase();
-                                            return searchStr.includes(memberSearchQuery.toLowerCase());
-                                        })
-                                        .map(enroll => {
-                                            if (unavailableStudentIds.includes(enroll.id)) return null;
-                                            return (
+                                    {(() => {
+                                        const query = memberSearchQuery.toLowerCase();
+                                        const visible = enrollments.filter(e => {
+                                            if (formData.members.includes(e.id)) return false;
+                                            if (!query) return true;
+                                            const str = `${e.student_details?.first_name || ''} ${e.student_details?.paternal_surname || ''} ${e.student_details?.maternal_surname || ''} ${e.student_details?.ci_number || ''}`.toLowerCase();
+                                            return str.includes(query);
+                                        });
+
+                                        if (visible.length === 0) return (
+                                            <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+                                                {query ? 'Sin resultados para la búsqueda.' : 'Todos los estudiantes ya están en el grupo.'}
+                                            </Typography>
+                                        );
+
+                                        return visible.map(enroll => {
+                                            const isTaken = unavailableStudentIds.includes(enroll.id);
+                                            const sd = enroll.student_details;
+                                            const fullLastName = [sd?.paternal_surname, sd?.maternal_surname].filter(Boolean).join(' ');
+                                            const label = `${sd?.ci_number ? sd.ci_number + ' · ' : ''}${fullLastName}${sd?.first_name ? ', ' + sd.first_name : ''}`;
+                                            return isTaken ? (
+                                                <Tooltip key={enroll.id} title="Ya está en otro grupo de esta actividad">
+                                                    <Chip
+                                                        avatar={<Avatar sx={{ bgcolor: 'error.light' }}>{enroll.student_details?.first_name?.[0]}</Avatar>}
+                                                        label={label}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ borderColor: 'error.main', color: 'error.main', cursor: 'not-allowed', opacity: 0.8 }}
+                                                    />
+                                                </Tooltip>
+                                            ) : (
                                                 <Chip
                                                     key={enroll.id}
-                                                    avatar={enroll.student_details?.first_name
-                                                        ? <Avatar>{enroll.student_details.first_name[0]}</Avatar>
-                                                        : undefined}
-                                                    label={`${enroll.student_details?.ci_number ? enroll.student_details.ci_number + ' · ' : ''}${enroll.student_details?.first_name || ''} ${enroll.student_details?.paternal_surname || ''}`}
+                                                    avatar={<Avatar>{enroll.student_details?.first_name?.[0]}</Avatar>}
+                                                    label={label}
                                                     clickable
                                                     onClick={() => handleMemberToggle(enroll.id)}
                                                     variant="outlined"
@@ -345,40 +338,13 @@ const ManageProjectDialog = ({
                                                     size="small"
                                                 />
                                             );
-                                        })}
-                                    {enrollments.filter(e => !formData.members.includes(e.id) && !unavailableStudentIds.includes(e.id)).length === 0 && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
-                                            Todos los estudiantes disponibles ya están en el grupo.
-                                        </Typography>
-                                    )}
+                                        });
+                                    })()}
                                 </Stack>
                             </Box>
                         </Collapse>
                     </Grid>
 
-                    {/* Leader */}
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                        <FormControl fullWidth variant="outlined" size="small">
-                            <InputLabel>Líder del Proyecto</InputLabel>
-                            <Select
-                                name="student_in_charge"
-                                value={formData.student_in_charge}
-                                onChange={handleInputChange}
-                                label="Líder del Proyecto"
-                            >
-                                <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                {formData.members.map(memId => {
-                                    const mem = enrollments.find(e => e.id === memId);
-                                    if (!mem) return null;
-                                    return (
-                                        <MenuItem key={mem.id} value={mem.id}>
-                                            {mem.student_details?.first_name} {mem.student_details?.paternal_surname}
-                                        </MenuItem>
-                                    );
-                                })}
-                            </Select>
-                        </FormControl>
-                    </Grid>
                 </Grid>
             </DialogContent>
 

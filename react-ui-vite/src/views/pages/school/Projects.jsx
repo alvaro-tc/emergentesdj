@@ -30,15 +30,17 @@ import {
     List,
     ListItem,
     ListItemText,
-    InputAdornment,
     Collapse,
     ListItemSecondaryAction,
     Snackbar,
     Alert,
     Switch,
-    FormControlLabel
+    FormControlLabel,
+    Stack,
+    Box,
+    InputAdornment
 } from '@mui/material';
-import { IconPlus, IconTrash, IconUsers, IconUserCheck, IconTarget, IconSearch, IconX, IconSettings, IconAlertTriangle, IconFileExport } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconUsers, IconUserCheck, IconTarget, IconSettings, IconAlertTriangle, IconFileExport, IconSearch, IconCrown, IconX } from '@tabler/icons-react';
 // Rename or use directly
 import axios from 'axios';
 import config from '../../../config';
@@ -76,8 +78,6 @@ const Projects = () => {
     const [projectToDelete, setProjectToDelete] = useState(null);
 
     // Manage UI State
-    // Manage UI State
-    const [createMemberSearchQuery, setCreateMemberSearchQuery] = useState('');
 
     // Snackbar State
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -105,6 +105,8 @@ const Projects = () => {
         student_in_charge: '',
         members: []
     });
+    const [createMemberSearch, setCreateMemberSearch] = useState('');
+    const [showCreateAddMembers, setShowCreateAddMembers] = useState(false);
 
     // Manage Form Data
     const [currentProject, setCurrentProject] = useState(null);
@@ -127,7 +129,7 @@ const Projects = () => {
 
     const loadData = () => {
         Promise.all([
-            axios.get(`${config.API_SERVER}enrollments/?course=${activeCourse.id}`),
+            axios.get(`${config.API_SERVER}enrollments/?course=${activeCourse.id}&page_size=500`),
             axios.get(`${config.API_SERVER}course-sub-criteria/?course=${activeCourse.id}`),
             axios.get(`${config.API_SERVER}projects/?course=${activeCourse.id}`)
         ]).then(([enrollRes, subCritRes, projRes]) => {
@@ -233,7 +235,8 @@ const Projects = () => {
             student_in_charge: '',
             members: []
         });
-        setCreateMemberSearchQuery('');
+        setCreateMemberSearch('');
+        setShowCreateAddMembers(false);
         setCreateDialogOpen(true);
     };
 
@@ -539,6 +542,7 @@ const Projects = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
+                                <TableCell>ID</TableCell>
                                 <TableCell>Nombre del Proyecto</TableCell>
                                 <TableCell>Líder</TableCell>
                                 <TableCell>Miembros</TableCell>
@@ -550,6 +554,7 @@ const Projects = () => {
                                         })()
                                     ) : 'Calificación (Puntos)'}
                                 </TableCell>
+                                <TableCell>Fecha de Registro</TableCell>
                                 <TableCell align="right">Acciones</TableCell>
                             </TableRow>
                         </TableHead>
@@ -557,36 +562,32 @@ const Projects = () => {
                             {filteredProjects.map(project => (
                                 <TableRow key={project.id} hover>
                                     <TableCell>
+                                        <Typography variant="caption" color="textSecondary">#{project.id}</Typography>
+                                    </TableCell>
+                                    <TableCell>
                                         <Typography variant="subtitle1" style={{ fontWeight: 'bold' }}>{project.name}</Typography>
                                         <Typography variant="caption" color="textSecondary">{project.description}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        {(() => {
-                                            const leader = enrollments.find(e => e.id === project.student_in_charge);
-                                            return leader ? (
-                                                <Chip
-                                                    icon={<IconUserCheck size="1rem" />}
-                                                    label={`${leader.student_details?.first_name} ${leader.student_details?.paternal_surname}`}
-                                                    size="small"
-                                                    color="primary"
-                                                    variant="outlined"
-                                                />
-                                            ) : '-';
-                                        })()}
+                                        {project.leader_details ? (
+                                            <Chip
+                                                icon={<IconUserCheck size="1rem" />}
+                                                label={`${project.leader_details.student_details?.first_name} ${project.leader_details.student_details?.paternal_surname}`}
+                                                size="small"
+                                                color="primary"
+                                                variant="outlined"
+                                            />
+                                        ) : '-'}
                                     </TableCell>
                                     <TableCell>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                            {project.members && project.members.map(memId => {
-                                                const mem = enrollments.find(e => e.id === memId);
-                                                if (!mem) return null;
-                                                return (
-                                                    <Tooltip title={`${mem.student_details?.first_name} ${mem.student_details?.paternal_surname}`} key={memId}>
-                                                        <Avatar style={{ width: 24, height: 24, fontSize: '0.75rem' }}>
-                                                            {mem.student_details?.first_name?.[0]}{mem.student_details?.paternal_surname?.[0]}
-                                                        </Avatar>
-                                                    </Tooltip>
-                                                );
-                                            })}
+                                            {project.member_details && project.member_details.map(mem => (
+                                                <Tooltip title={`${mem.student_details?.first_name} ${mem.student_details?.paternal_surname}`} key={mem.id}>
+                                                    <Avatar style={{ width: 24, height: 24, fontSize: '0.75rem' }}>
+                                                        {mem.student_details?.first_name?.[0]}{mem.student_details?.paternal_surname?.[0]}
+                                                    </Avatar>
+                                                </Tooltip>
+                                            ))}
                                             <Typography variant="caption" style={{ alignSelf: 'center', marginLeft: 4 }}>
                                                 ({project.members.length})
                                             </Typography>
@@ -595,6 +596,13 @@ const Projects = () => {
                                     <TableCell>
                                         <Typography variant="h4" color={project.score ? 'primary' : 'textSecondary'}>
                                             {project.score || '-'}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="caption">
+                                            {project.created_at
+                                                ? new Date(project.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                : '-'}
                                         </Typography>
                                     </TableCell>
                                     <TableCell align="right">
@@ -616,7 +624,7 @@ const Projects = () => {
                             ))}
                             {filteredProjects.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                         {selectedSubCriterion
                                             ? 'No hay proyectos para este sub-criterio.'
                                             : 'No hay proyectos para este curso.'}
@@ -716,11 +724,22 @@ const Projects = () => {
                 </DialogActions>
             </Dialog>
             {/* Create Dialog */}
-            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Nuevo Proyecto</DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={2}>
-                        <Grid size={12}>
+            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{
+                    pb: 1, pt: 2.5, px: 3,
+                    borderBottom: '1px solid', borderColor: 'divider',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                    <Typography variant="h4" fontWeight={700}>Nuevo Proyecto</Typography>
+                    <IconButton size="small" onClick={() => setCreateDialogOpen(false)} sx={{ color: 'text.secondary' }}>
+                        <IconX size={20} />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, py: 2 }}>
+                    <Grid container spacing={2.5}>
+                        {/* Información */}
+                        <Grid size={{ xs: 12, sm: 8 }} sx={{ mt: 1 }}>
                             <TextField
                                 fullWidth
                                 label="Nombre del Proyecto"
@@ -728,11 +747,24 @@ const Projects = () => {
                                 value={createFormData.name}
                                 onChange={handleCreateInputChange}
                                 variant="outlined"
-                                style={{ marginTop: 16 }}
+                                size="small"
                             />
                         </Grid>
                         <Grid size={12}>
-                            <FormControl fullWidth variant="outlined">
+                            <TextField
+                                fullWidth
+                                label="Descripción"
+                                name="description"
+                                value={createFormData.description}
+                                onChange={handleCreateInputChange}
+                                variant="outlined"
+                                size="small"
+                                multiline
+                                rows={2}
+                            />
+                        </Grid>
+                        <Grid size={12}>
+                            <FormControl fullWidth variant="outlined" size="small">
                                 <InputLabel>Sub-Criterio (Obligatorio)</InputLabel>
                                 <Select
                                     name="sub_criterion"
@@ -748,98 +780,156 @@ const Projects = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid size={12}>
-                            <TextField
-                                fullWidth
-                                label="Descripción"
-                                name="description"
-                                value={createFormData.description}
-                                onChange={handleCreateInputChange}
-                                variant="outlined"
-                                multiline
-                                rows={2}
-                            />
-                        </Grid>
 
+                        {/* Integrantes seleccionados */}
                         <Grid size={12}>
-                            <Typography variant="subtitle1" gutterBottom style={{ marginTop: 8 }}>
-                                Seleccionar Integrantes
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Box sx={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 28, height: 28, borderRadius: '8px',
+                                    bgcolor: 'primary.main', color: 'white'
+                                }}>
+                                    <IconUsers size={16} />
+                                </Box>
+                                <Typography variant="h5" fontWeight={600}>Integrantes</Typography>
+                                <Box sx={{ flex: 1 }}><Divider /></Box>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                Haz clic en un integrante para asignarlo como líder. El líder actual se muestra resaltado.
                             </Typography>
-                            <TextField
-                                fullWidth
-                                placeholder="Buscar estudiante..."
-                                variant="outlined"
-                                size="small"
-                                value={createMemberSearchQuery}
-                                onChange={(e) => setCreateMemberSearchQuery(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <IconSearch size={16} />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                style={{ marginBottom: 8 }}
-                            />
-                            <Paper style={{ maxHeight: 200, overflow: 'auto', padding: 8 }} variant="outlined">
-                                <Grid container spacing={1}>
-                                    {enrollments.map(enroll => {
-                                        // Filter by search
-                                        if (createMemberSearchQuery) {
-                                            const searchStr = `${enroll.student_details?.first_name || ''} ${enroll.student_details?.paternal_surname || ''} ${enroll.student_details?.maternal_surname || ''} ${enroll.student_details?.ci_number || ''}`.toLowerCase();
-                                            if (!searchStr.includes(createMemberSearchQuery.toLowerCase())) return null;
-                                        }
-
-                                        const isSelected = createFormData.members.includes(enroll.id);
-                                        const unavailableIds = getUnavailableStudentIds(createFormData.sub_criterion);
-                                        const isUnavailable = unavailableIds.includes(enroll.id);
-
-                                        if (isUnavailable) return null; // Don't show unavailable students
-
-                                        return (
-                                            <Grid key={enroll.id}>
+                            <Box sx={{
+                                border: '1px solid', borderColor: 'divider', borderRadius: 2,
+                                p: 2, minHeight: 60, bgcolor: 'grey.50'
+                            }}>
+                                {createFormData.members.length === 0 ? (
+                                    <Typography variant="body2" color="text.secondary">
+                                        No hay integrantes seleccionados. Usa el botón "Añadir" para agregar.
+                                    </Typography>
+                                ) : (
+                                    <Stack direction="row" flexWrap="wrap" gap={1}>
+                                        {createFormData.members.map(memId => {
+                                            const mem = enrollments.find(e => e.id === memId);
+                                            if (!mem) return null;
+                                            const isLeader = createFormData.student_in_charge === memId;
+                                            return (
                                                 <Chip
-                                                    avatar={<Avatar>{enroll.student_details?.first_name?.[0]}</Avatar>}
-                                                    label={`${enroll.student_details?.ci_number ? enroll.student_details.ci_number + ' · ' : ''}${enroll.student_details?.first_name} ${enroll.student_details?.paternal_surname}`}
-                                                    clickable
-                                                    onClick={() => handleCreateMemberToggle(enroll.id)}
-                                                    color={isSelected ? "primary" : "default"}
-                                                    variant={isSelected ? "default" : "outlined"}
+                                                    key={memId}
+                                                    avatar={
+                                                        <Avatar sx={{ bgcolor: isLeader ? 'secondary.main' : 'primary.main' }}>
+                                                            {mem.student_details?.first_name?.[0]}
+                                                        </Avatar>
+                                                    }
+                                                    label={`${mem.student_details?.ci_number ? mem.student_details.ci_number + ' · ' : ''}${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''}${isLeader ? ' · Líder' : ''}`}
+                                                    color={isLeader ? 'secondary' : 'primary'}
+                                                    onClick={() => setCreateFormData(prev => ({
+                                                        ...prev,
+                                                        student_in_charge: isLeader ? '' : memId
+                                                    }))}
+                                                    onDelete={() => handleCreateMemberToggle(memId)}
+                                                    variant={isLeader ? 'filled' : 'outlined'}
+                                                    icon={isLeader ? <IconCrown size={14} /> : undefined}
+                                                    size="small"
+                                                    sx={{ cursor: 'pointer' }}
                                                 />
-                                            </Grid>
-                                        );
-                                    })}
-                                </Grid>
-                            </Paper>
+                                            );
+                                        })}
+                                    </Stack>
+                                )}
+                            </Box>
                         </Grid>
 
+                        {/* Panel para agregar miembros */}
                         <Grid size={12}>
-                            <FormControl fullWidth variant="outlined">
-                                <InputLabel>Líder del Proyecto</InputLabel>
-                                <Select
-                                    name="student_in_charge"
-                                    value={createFormData.student_in_charge}
-                                    onChange={handleCreateInputChange}
-                                    label="Líder del Proyecto"
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Estudiantes disponibles para agregar al grupo
+                                </Typography>
+                                <Button
+                                    size="small"
+                                    variant={showCreateAddMembers ? 'outlined' : 'contained'}
+                                    color="primary"
+                                    onClick={() => setShowCreateAddMembers(v => !v)}
+                                    startIcon={showCreateAddMembers ? <IconX size={14} /> : <IconPlus size={14} />}
+                                    sx={{ borderRadius: 2 }}
                                 >
-                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                    {createFormData.members.map(memId => {
-                                        const mem = enrollments.find(e => e.id === memId);
-                                        if (!mem) return null;
-                                        return (
-                                            <MenuItem key={mem.id} value={mem.id}>
-                                                {mem.student_details?.first_name} {mem.student_details?.paternal_surname}
-                                            </MenuItem>
-                                        );
-                                    })}
-                                </Select>
-                            </FormControl>
+                                    {showCreateAddMembers ? 'Cerrar' : 'Añadir'}
+                                </Button>
+                            </Box>
+                            <Collapse in={showCreateAddMembers}>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Buscar por nombre, apellido o carnet..."
+                                    variant="outlined"
+                                    size="small"
+                                    value={createMemberSearch}
+                                    onChange={(e) => setCreateMemberSearch(e.target.value)}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <IconSearch size={16} />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{ mb: 1.5 }}
+                                />
+                                <Box sx={{
+                                    maxHeight: 220, overflow: 'auto', p: 1.5,
+                                    border: '1px solid', borderColor: 'divider', borderRadius: 2
+                                }}>
+                                    <Stack direction="row" flexWrap="wrap" gap={1}>
+                                        {(() => {
+                                            const unavailableIds = getUnavailableStudentIds(createFormData.sub_criterion);
+                                            const query = createMemberSearch.toLowerCase();
+                                            const visible = enrollments.filter(e => {
+                                                if (createFormData.members.includes(e.id)) return false;
+                                                if (!query) return true;
+                                                const str = `${e.student_details?.first_name || ''} ${e.student_details?.paternal_surname || ''} ${e.student_details?.maternal_surname || ''} ${e.student_details?.ci_number || ''}`.toLowerCase();
+                                                return str.includes(query);
+                                            });
+                                            if (visible.length === 0) return (
+                                                <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+                                                    {query ? 'Sin resultados para la búsqueda.' : 'Todos los estudiantes ya están en el grupo.'}
+                                                </Typography>
+                                            );
+                                            return visible.map(enroll => {
+                                                const isTaken = unavailableIds.includes(enroll.id);
+                                                const sd = enroll.student_details;
+                                                const fullLastName = [sd?.paternal_surname, sd?.maternal_surname].filter(Boolean).join(' ');
+                                                const label = `${sd?.ci_number ? sd.ci_number + ' · ' : ''}${fullLastName}${sd?.first_name ? ', ' + sd.first_name : ''}`;
+                                                return isTaken ? (
+                                                    <Tooltip key={enroll.id} title="Ya está registrado en otro grupo de esta actividad">
+                                                        <Chip
+                                                            avatar={<Avatar sx={{ bgcolor: 'error.light' }}>{enroll.student_details?.first_name?.[0]}</Avatar>}
+                                                            label={label}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            sx={{ borderColor: 'error.main', color: 'error.main', cursor: 'not-allowed', opacity: 0.8 }}
+                                                        />
+                                                    </Tooltip>
+                                                ) : (
+                                                    <Chip
+                                                        key={enroll.id}
+                                                        avatar={<Avatar>{enroll.student_details?.first_name?.[0]}</Avatar>}
+                                                        label={label}
+                                                        clickable
+                                                        onClick={() => handleCreateMemberToggle(enroll.id)}
+                                                        variant="outlined"
+                                                        deleteIcon={<IconPlus size={14} />}
+                                                        onDelete={() => handleCreateMemberToggle(enroll.id)}
+                                                        size="small"
+                                                    />
+                                                );
+                                            });
+                                        })()}
+                                    </Stack>
+                                </Box>
+                            </Collapse>
                         </Grid>
                     </Grid>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleCreateSave} color="primary" variant="contained">Crear</Button>
+                <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
+                    <Button onClick={() => setCreateDialogOpen(false)} variant="outlined" sx={{ borderRadius: 2 }}>Cancelar</Button>
+                    <Button onClick={handleCreateSave} color="primary" variant="contained" sx={{ borderRadius: 2, px: 3 }}>Crear</Button>
                 </DialogActions>
             </Dialog>
             {/* Manage Dialog */}
@@ -849,6 +939,7 @@ const Projects = () => {
                 project={currentProject}
                 enrollments={enrollments}
                 unavailableStudentIds={currentProject ? getUnavailableStudentIds(currentProject.sub_criterion, currentProject.id) : []}
+                courseId={activeCourse?.id}
                 onSave={handleManageSave}
             />
             {/* Delete Confirmation Dialog */}
