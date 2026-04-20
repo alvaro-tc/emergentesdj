@@ -43,6 +43,7 @@ const ManageProjectDialog = ({
     });
     const [showAddMembers, setShowAddMembers] = useState(false);
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
+    const [memberRemoveSearchQuery, setMemberRemoveSearchQuery] = useState('');
 
     useEffect(() => {
         if (project && open) {
@@ -57,6 +58,7 @@ const ManageProjectDialog = ({
             });
             setShowAddMembers(false);
             setMemberSearchQuery('');
+            setMemberRemoveSearchQuery('');
         }
     }, [project, open]);
 
@@ -200,6 +202,31 @@ const ManageProjectDialog = ({
 
                     {/* Current Members */}
                     <Grid size={12}>
+                        {formData.members.length > 0 && (
+                            <TextField
+                                fullWidth
+                                placeholder="Buscar integrante por nombre o CI para quitar..."
+                                variant="outlined"
+                                size="small"
+                                value={memberRemoveSearchQuery}
+                                onChange={(e) => setMemberRemoveSearchQuery(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconSearch size={16} />
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: memberRemoveSearchQuery ? (
+                                        <InputAdornment position="end">
+                                            <IconButton size="small" onClick={() => setMemberRemoveSearchQuery('')}>
+                                                <IconX size={14} />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ) : null,
+                                }}
+                                sx={{ mb: 1 }}
+                            />
+                        )}
                         <Box sx={{
                             border: '1px solid', borderColor: 'divider', borderRadius: 2,
                             p: 2, minHeight: 72, bgcolor: 'grey.50'
@@ -210,27 +237,45 @@ const ManageProjectDialog = ({
                                 </Typography>
                             ) : (
                                 <Stack direction="row" flexWrap="wrap" gap={1}>
-                                    {formData.members.map(memId => {
+                                    {formData.members
+                                        .filter(memId => {
+                                            if (!memberRemoveSearchQuery) return true;
+                                            const mem = enrollments.find(e => e.id === memId);
+                                            if (!mem) return false;
+                                            const searchStr = `${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''} ${mem.student_details?.maternal_surname || ''} ${mem.student_details?.ci_number || ''}`.toLowerCase();
+                                            return searchStr.includes(memberRemoveSearchQuery.toLowerCase());
+                                        })
+                                        .map(memId => {
+                                            const mem = enrollments.find(e => e.id === memId);
+                                            if (!mem) return null;
+                                            const isLeader = formData.student_in_charge === memId;
+                                            return (
+                                                <Chip
+                                                    key={memId}
+                                                    avatar={mem.student_details?.first_name
+                                                        ? <Avatar sx={{ bgcolor: isLeader ? 'secondary.main' : 'primary.main' }}>
+                                                            {mem.student_details.first_name[0]}
+                                                          </Avatar>
+                                                        : undefined}
+                                                    label={`${mem.student_details?.ci_number ? mem.student_details.ci_number + ' · ' : ''}${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''}${isLeader ? ' · Líder' : ''}`}
+                                                    color={isLeader ? 'secondary' : 'primary'}
+                                                    onDelete={() => handleMemberToggle(memId)}
+                                                    variant={isLeader ? 'filled' : 'outlined'}
+                                                    icon={isLeader ? <IconUserCheck size={14} /> : undefined}
+                                                    size="small"
+                                                />
+                                            );
+                                        })}
+                                    {memberRemoveSearchQuery && formData.members.filter(memId => {
                                         const mem = enrollments.find(e => e.id === memId);
-                                        if (!mem) return null;
-                                        const isLeader = formData.student_in_charge === memId;
-                                        return (
-                                            <Chip
-                                                key={memId}
-                                                avatar={mem.student_details?.first_name
-                                                    ? <Avatar sx={{ bgcolor: isLeader ? 'secondary.main' : 'primary.main' }}>
-                                                        {mem.student_details.first_name[0]}
-                                                      </Avatar>
-                                                    : undefined}
-                                                label={`${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''}${isLeader ? ' · Líder' : ''}`}
-                                                color={isLeader ? 'secondary' : 'primary'}
-                                                onDelete={() => handleMemberToggle(memId)}
-                                                variant={isLeader ? 'filled' : 'outlined'}
-                                                icon={isLeader ? <IconUserCheck size={14} /> : undefined}
-                                                size="small"
-                                            />
-                                        );
-                                    })}
+                                        if (!mem) return false;
+                                        const searchStr = `${mem.student_details?.first_name || ''} ${mem.student_details?.paternal_surname || ''} ${mem.student_details?.maternal_surname || ''} ${mem.student_details?.ci_number || ''}`.toLowerCase();
+                                        return searchStr.includes(memberRemoveSearchQuery.toLowerCase());
+                                    }).length === 0 && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Sin resultados para "{memberRemoveSearchQuery}".
+                                        </Typography>
+                                    )}
                                 </Stack>
                             )}
                         </Box>
@@ -280,8 +325,8 @@ const ManageProjectDialog = ({
                                         .filter(e => !formData.members.includes(e.id))
                                         .filter(e => {
                                             if (!memberSearchQuery) return true;
-                                            const fullName = `${e.student_details?.first_name} ${e.student_details?.paternal_surname}`.toLowerCase();
-                                            return fullName.includes(memberSearchQuery.toLowerCase());
+                                            const searchStr = `${e.student_details?.first_name || ''} ${e.student_details?.paternal_surname || ''} ${e.student_details?.maternal_surname || ''} ${e.student_details?.ci_number || ''}`.toLowerCase();
+                                            return searchStr.includes(memberSearchQuery.toLowerCase());
                                         })
                                         .map(enroll => {
                                             if (unavailableStudentIds.includes(enroll.id)) return null;
@@ -291,7 +336,7 @@ const ManageProjectDialog = ({
                                                     avatar={enroll.student_details?.first_name
                                                         ? <Avatar>{enroll.student_details.first_name[0]}</Avatar>
                                                         : undefined}
-                                                    label={`${enroll.student_details?.first_name || ''} ${enroll.student_details?.paternal_surname || ''}`}
+                                                    label={`${enroll.student_details?.ci_number ? enroll.student_details.ci_number + ' · ' : ''}${enroll.student_details?.first_name || ''} ${enroll.student_details?.paternal_surname || ''}`}
                                                     clickable
                                                     onClick={() => handleMemberToggle(enroll.id)}
                                                     variant="outlined"

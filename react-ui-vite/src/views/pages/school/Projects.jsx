@@ -38,13 +38,14 @@ import {
     Switch,
     FormControlLabel
 } from '@mui/material';
-import { IconPlus, IconTrash, IconUsers, IconUserCheck, IconTarget, IconSearch, IconX, IconSettings, IconAlertTriangle } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconUsers, IconUserCheck, IconTarget, IconSearch, IconX, IconSettings, IconAlertTriangle, IconFileExport } from '@tabler/icons-react';
 // Rename or use directly
 import axios from 'axios';
 import config from '../../../config';
 import { useSelector } from 'react-redux';
 import ManageProjectDialog from './components/ManageProjectDialog';
 import { useLocation, useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const Projects = () => {
     const activeCourse = useSelector((state) => state.account.activeCourse);
@@ -372,6 +373,60 @@ const Projects = () => {
         return sc ? sc.name : 'Unknown';
     };
 
+    const handleExportExcel = () => {
+        const filteredProjects = selectedSubCriterion
+            ? projects.filter(p => p.sub_criterion === selectedSubCriterion)
+            : projects;
+
+        const dataToExport = [];
+        filteredProjects.forEach(project => {
+            const leader = enrollments.find(e => e.id === project.student_in_charge);
+            const leaderName = leader && leader.student_details ? `${leader.student_details.first_name} ${leader.student_details.paternal_surname} ${leader.student_details.maternal_surname || ''}`.trim() : '-';
+
+            if (project.members && project.members.length > 0) {
+                project.members.forEach(memberId => {
+                    const memberInfo = enrollments.find(e => e.id === memberId);
+                    const studentDetails = memberInfo ? memberInfo.student_details : null;
+                    dataToExport.push({
+                        'ID de proyecto': project.id,
+                        'Nombre Proyecto': project.name,
+                        'Carnet': studentDetails ? studentDetails.ci_number : '-',
+                        'Paterno': studentDetails ? studentDetails.paternal_surname : '-',
+                        'Materno': studentDetails ? studentDetails.maternal_surname || '' : '-',
+                        'Nombres': studentDetails ? studentDetails.first_name : '-',
+                        'Líder del proyecto': leaderName
+                    });
+                });
+            } else {
+                dataToExport.push({
+                    'ID de proyecto': project.id,
+                    'Nombre Proyecto': project.name,
+                    'Carnet': '-',
+                    'Paterno': '-',
+                    'Materno': '-',
+                    'Nombres': '-',
+                    'Líder del proyecto': leaderName
+                });
+            }
+        });
+
+        if (dataToExport.length === 0) {
+            showSnackbar('No hay proyectos para exportar.', 'warning');
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Proyectos');
+        
+        let filename = 'Proyectos';
+        if (activeCourse) {
+            const subjectName = activeCourse.subject_details?.name || activeCourse.subject?.name || 'Materia';
+            filename += `_${subjectName}_${activeCourse.parallel}`;
+        }
+        XLSX.writeFile(workbook, `${filename}.xlsx`);
+    };
+
     const subjectName = activeCourse ? (activeCourse.subject_details?.name || activeCourse.subject?.name || 'Materia') : '';
     const projectSubCriteria = subCriteria.filter(sc => sc.is_project);
 
@@ -426,6 +481,16 @@ const Projects = () => {
                                         Configurar Inscripción
                                     </Button>
                                 )}
+                                <Button
+                                    variant="outlined"
+                                    color="success"
+                                    startIcon={<IconFileExport />}
+                                    onClick={handleExportExcel}
+                                    disabled={!activeCourse || filteredProjects.length === 0}
+                                    style={{ marginRight: 8 }}
+                                >
+                                    Exportar a Excel
+                                </Button>
                                 <Button
                                     variant="contained"
                                     color="secondary"
@@ -721,8 +786,8 @@ const Projects = () => {
                                     {enrollments.map(enroll => {
                                         // Filter by search
                                         if (createMemberSearchQuery) {
-                                            const fullName = `${enroll.student_details?.first_name} ${enroll.student_details?.paternal_surname}`.toLowerCase();
-                                            if (!fullName.includes(createMemberSearchQuery.toLowerCase())) return null;
+                                            const searchStr = `${enroll.student_details?.first_name || ''} ${enroll.student_details?.paternal_surname || ''} ${enroll.student_details?.maternal_surname || ''} ${enroll.student_details?.ci_number || ''}`.toLowerCase();
+                                            if (!searchStr.includes(createMemberSearchQuery.toLowerCase())) return null;
                                         }
 
                                         const isSelected = createFormData.members.includes(enroll.id);
@@ -735,7 +800,7 @@ const Projects = () => {
                                             <Grid key={enroll.id}>
                                                 <Chip
                                                     avatar={<Avatar>{enroll.student_details?.first_name?.[0]}</Avatar>}
-                                                    label={`${enroll.student_details?.first_name} ${enroll.student_details?.paternal_surname}`}
+                                                    label={`${enroll.student_details?.ci_number ? enroll.student_details.ci_number + ' · ' : ''}${enroll.student_details?.first_name} ${enroll.student_details?.paternal_surname}`}
                                                     clickable
                                                     onClick={() => handleCreateMemberToggle(enroll.id)}
                                                     color={isSelected ? "primary" : "default"}
