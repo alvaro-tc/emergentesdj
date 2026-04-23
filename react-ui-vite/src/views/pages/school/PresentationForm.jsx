@@ -58,11 +58,15 @@ const PresentationForm = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [logoError, setLogoError] = useState(false);
 
+    const [logoOscuroError, setLogoOscuroError] = useState(false);
+
     const [form, setForm] = useState({
         subject: activeCourse?.subject || '',
         title: '',
         subtitle: '',
+        autor: '',
         logo_url: '',
+        logo_oscuro: '',
         theme: 'default',
         content: PLACEHOLDER_CONTENT,
     });
@@ -86,7 +90,9 @@ const PresentationForm = () => {
                     subject: p.subject || '',
                     title: p.title || '',
                     subtitle: p.subtitle || '',
+                    autor: p.autor || '',
                     logo_url: p.logo_url || '',
+                    logo_oscuro: p.logo_oscuro || '',
                     theme: p.theme || 'default',
                     content: p.content || '',
                 });
@@ -98,7 +104,17 @@ const PresentationForm = () => {
     const handleChange = (field) => (e) => {
         setForm(f => ({ ...f, [field]: e.target.value }));
         if (field === 'logo_url') setLogoError(false);
+        if (field === 'logo_oscuro') setLogoOscuroError(false);
     };
+
+    // Light themes use logo_oscuro; dark themes use logo_url
+    const LIGHT_THEMES = ['corporate'];
+    const activeLogo = LIGHT_THEMES.includes(form.theme)
+        ? (form.logo_oscuro || form.logo_url)
+        : (form.logo_url || form.logo_oscuro);
+    const activeLogoError = LIGHT_THEMES.includes(form.theme)
+        ? (form.logo_oscuro ? logoOscuroError : logoError)
+        : (form.logo_url ? logoError : logoOscuroError);
 
     const slideCount = () => {
         const extra = (form.content || '').split('---').filter(s => s.trim()).length;
@@ -224,23 +240,57 @@ const PresentationForm = () => {
                             <Grid size={12}>
                                 <TextField
                                     fullWidth size="small"
-                                    label="URL del Logo"
+                                    label="Autor"
+                                    value={form.autor}
+                                    onChange={handleChange('autor')}
+                                    placeholder="Nombre del autor"
+                                />
+                            </Grid>
+
+                            <Grid size={12}>
+                                <TextField
+                                    fullWidth size="small"
+                                    label="Logo claro (temas oscuros)"
                                     value={form.logo_url}
                                     onChange={handleChange('logo_url')}
                                     InputProps={{ startAdornment: <IconPhoto size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
                                 />
                                 {form.logo_url && !logoError && (
                                     <Box mt={1} display="flex" justifyContent="center"
-                                        sx={{ bgcolor: selectedTheme.bg, borderRadius: 1, p: 1.5 }}>
+                                        sx={{ bgcolor: '#1c1c1c', borderRadius: 1, p: 1.5 }}>
                                         <img
                                             src={form.logo_url}
                                             alt="logo preview"
                                             onError={() => setLogoError(true)}
-                                            style={{ maxHeight: 80, maxWidth: '100%', objectFit: 'contain' }}
+                                            style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }}
                                         />
                                     </Box>
                                 )}
                                 {form.logo_url && logoError && (
+                                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>URL de imagen no válida o inaccesible.</Alert>
+                                )}
+                            </Grid>
+
+                            <Grid size={12}>
+                                <TextField
+                                    fullWidth size="small"
+                                    label="Logo oscuro (temas claros)"
+                                    value={form.logo_oscuro}
+                                    onChange={handleChange('logo_oscuro')}
+                                    InputProps={{ startAdornment: <IconPhoto size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
+                                />
+                                {form.logo_oscuro && !logoOscuroError && (
+                                    <Box mt={1} display="flex" justifyContent="center"
+                                        sx={{ bgcolor: '#f5f5f5', borderRadius: 1, p: 1.5 }}>
+                                        <img
+                                            src={form.logo_oscuro}
+                                            alt="logo oscuro preview"
+                                            onError={() => setLogoOscuroError(true)}
+                                            style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }}
+                                        />
+                                    </Box>
+                                )}
+                                {form.logo_oscuro && logoOscuroError && (
                                     <Alert severity="warning" sx={{ mt: 1, py: 0 }}>URL de imagen no válida o inaccesible.</Alert>
                                 )}
                             </Grid>
@@ -279,22 +329,37 @@ const PresentationForm = () => {
                                 <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>Vista previa de portada</Typography>
                                 <Box sx={{
                                     bgcolor: selectedTheme.bg, color: selectedTheme.fg,
-                                    borderRadius: 2, p: 3, textAlign: 'center',
-                                    minHeight: 120, display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'center', gap: 1
+                                    borderRadius: 2, textAlign: 'center',
+                                    minHeight: 160, display: 'flex', flexDirection: 'column',
+                                    alignItems: 'center', justifyContent: 'space-between',
+                                    p: 2, gap: 0,
                                 }}>
-                                    {form.logo_url && !logoError && (
-                                        <img src={form.logo_url} alt="logo"
-                                            style={{ maxHeight: 48, maxWidth: '80%', objectFit: 'contain', marginBottom: 8 }} />
-                                    )}
-                                    <Typography variant="h5" fontWeight={700} sx={{ color: selectedTheme.fg }}>
-                                        {form.title || 'Título de la presentación'}
-                                    </Typography>
-                                    {form.subtitle && (
-                                        <Typography variant="body2" sx={{ color: selectedTheme.fg, opacity: 0.8 }}>
-                                            {form.subtitle}
+                                    {/* Logo - top */}
+                                    <Box sx={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {activeLogo && !activeLogoError && (
+                                            <img src={activeLogo} alt="logo"
+                                                style={{ maxHeight: 44, maxWidth: '80%', objectFit: 'contain' }} />
+                                        )}
+                                    </Box>
+                                    {/* Title + Subtitle - center */}
+                                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.5, py: 1 }}>
+                                        <Typography variant="h5" fontWeight={700} sx={{ color: selectedTheme.fg, lineHeight: 1.2 }}>
+                                            {form.title || 'Título de la presentación'}
                                         </Typography>
-                                    )}
+                                        {form.subtitle && (
+                                            <Typography variant="body2" sx={{ color: selectedTheme.fg, opacity: 0.8 }}>
+                                                {form.subtitle}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                    {/* Author - bottom */}
+                                    <Box sx={{ minHeight: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {form.autor && (
+                                            <Typography variant="caption" sx={{ color: selectedTheme.fg, opacity: 0.75 }}>
+                                                {form.autor}
+                                            </Typography>
+                                        )}
+                                    </Box>
                                 </Box>
                             </Grid>
                         </Grid>

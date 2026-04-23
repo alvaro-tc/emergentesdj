@@ -113,7 +113,7 @@ const DiagramFrame = ({ src, isDark }) => {
                                 letterSpacing: '0.02em',
                                 whiteSpace: 'nowrap',
                             }}>
-                                CausalGrupo.drawio
+                               
                             </Typography>
                         </Box>
                     </Box>
@@ -201,7 +201,6 @@ const DiagramFrame = ({ src, isDark }) => {
                         color: C.windowText,
                         letterSpacing: '0.06em',
                     }}>
-                        Modelo Causal — Vista de solo lectura
                     </Typography>
                     <Typography sx={{
                         fontFamily: "'JetBrains Mono', monospace",

@@ -393,6 +393,7 @@ const Projects = () => {
                     const studentDetails = memberInfo ? memberInfo.student_details : null;
                     dataToExport.push({
                         'ID de proyecto': project.id,
+                        'Grupo': project.group_number != null ? project.group_number : '-',
                         'Nombre Proyecto': project.name,
                         'Carnet': studentDetails ? studentDetails.ci_number : '-',
                         'Paterno': studentDetails ? studentDetails.paternal_surname : '-',
@@ -404,6 +405,7 @@ const Projects = () => {
             } else {
                 dataToExport.push({
                     'ID de proyecto': project.id,
+                    'Grupo': project.group_number != null ? project.group_number : '-',
                     'Nombre Proyecto': project.name,
                     'Carnet': '-',
                     'Paterno': '-',
@@ -587,6 +589,7 @@ const Projects = () => {
                         <TableHead>
                             <TableRow>
                                 <TableCell>ID</TableCell>
+                                <TableCell>Grupo</TableCell>
                                 <TableCell>Nombre del Proyecto</TableCell>
                                 <TableCell>Miembros</TableCell>
                                 <TableCell>
@@ -606,6 +609,11 @@ const Projects = () => {
                                 <TableRow key={project.id} hover>
                                     <TableCell>
                                         <Typography variant="caption" color="textSecondary">#{project.id}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        {project.group_number != null
+                                            ? <Chip label={`Grupo ${project.group_number}`} size="small" color="primary" variant="outlined" />
+                                            : <Typography variant="caption" color="textSecondary">—</Typography>}
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="subtitle1" style={{ fontWeight: 'bold' }}>{project.name}</Typography>
@@ -663,7 +671,7 @@ const Projects = () => {
                             ))}
                             {filteredProjects.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                         {selectedSubCriterion
                                             ? 'No hay proyectos para este sub-criterio.'
                                             : 'No hay proyectos para este curso.'}

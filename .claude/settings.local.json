@@ -44,7 +44,8 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\) if 'framer' in k or 'motion' in k]\")",
       "Bash(grep -oP \"API_SERVER \\\\+ ['\\\\\"\\\\`][^'\\\\\"\\\\`]*\")",
       "Bash(grep -oP \"\\\\`\\\\$\\\\{configData\\\\.API_SERVER\\\\}[^'\\\\\"\\\\`]*\")",
-      "Bash(grep -oE \"\\(get|post|put|patch|delete\\)\\\\\\(['\\\\`][^\\\\\\)]*\")"
+      "Bash(grep -oE \"\\(get|post|put|patch|delete\\)\\\\\\(['\\\\`][^\\\\\\)]*\")",
+      "Bash(find:*)"
     ]
   },
   "enabledPlugins": {

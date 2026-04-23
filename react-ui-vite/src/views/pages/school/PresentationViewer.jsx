@@ -69,15 +69,33 @@ const PresentationViewer = () => {
             .map(s => s.trim())
             .filter(Boolean);
 
-        const coverLogoHtml = presentation.logo_url
-            ? `<img src="${escapeHtml(presentation.logo_url)}" alt="logo" style="max-height:140px;border:none;background:none;box-shadow:none;margin-bottom:16px;" /><br/>`
+        // sky (ocean) y beige (forest) y white (corporate) son temas claros
+        const LIGHT_THEMES = ['ocean', 'forest', 'corporate'];
+        const isLight = LIGHT_THEMES.includes(presentation.theme);
+        const coverLogo = isLight
+            ? (presentation.logo_oscuro || presentation.logo_url)
+            : (presentation.logo_url || presentation.logo_oscuro);
+
+        const coverLogoHtml = coverLogo
+            ? `<img src="${escapeHtml(coverLogo)}" alt="logo" style="max-height:100px;border:none;background:none;box-shadow:none;display:block;" />`
+            : '';
+
+        const autorHtml = presentation.autor
+            ? `<p style="margin:0;font-size:0.85em;opacity:0.7;letter-spacing:0.03em;">${escapeHtml(presentation.autor)}</p>`
             : '';
 
         let slidesHtml = `
-            <section>
-                ${coverLogoHtml}
-                <h1>${escapeHtml(presentation.title)}</h1>
-                ${presentation.subtitle ? `<h3 style="opacity:0.75">${escapeHtml(presentation.subtitle)}</h3>` : ''}
+            <section style="position:relative;padding:0;overflow:hidden;height:100vh;box-sizing:border-box;">
+                <div style="position:absolute;top:6%;left:0;width:100%;display:flex;justify-content:center;align-items:center;">
+                    ${coverLogoHtml}
+                </div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;text-align:center;">
+                    <h1 style="margin:0 0 16px 0;line-height:1.15;">${escapeHtml(presentation.title)}</h1>
+                    ${presentation.subtitle ? `<h3 style="opacity:0.75;margin:0;font-weight:400;">${escapeHtml(presentation.subtitle)}</h3>` : ''}
+                </div>
+                <div style="position:absolute;bottom:6%;left:0;width:100%;display:flex;justify-content:center;align-items:center;">
+                    ${autorHtml}
+                </div>
             </section>
         `;
 

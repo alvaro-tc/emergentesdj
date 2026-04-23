@@ -233,14 +233,16 @@ class Presentation(models.Model):
         ('corporate', 'Corporate'),
         ('neon',      'Neon'),
     ]
-    subject    = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True, related_name='presentations')
-    title      = models.CharField(max_length=255)
-    subtitle   = models.CharField(max_length=255, blank=True, null=True)
-    logo_url   = models.URLField(blank=True, null=True)
-    theme      = models.CharField(max_length=50, choices=THEME_CHOICES, default='default')
-    content    = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    subject      = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True, related_name='presentations')
+    title        = models.CharField(max_length=255)
+    subtitle     = models.CharField(max_length=255, blank=True, null=True)
+    autor        = models.CharField(max_length=255, blank=True, null=True)
+    logo_url     = models.URLField(blank=True, null=True)
+    logo_oscuro  = models.URLField(blank=True, null=True)
+    theme        = models.CharField(max_length=50, choices=THEME_CHOICES, default='default')
+    content      = models.TextField(blank=True, null=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
