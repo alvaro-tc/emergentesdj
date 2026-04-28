@@ -59,6 +59,7 @@ const StudentGroups          = Loadable(lazy(() => import('../views/pages/studen
 const Presentations          = Loadable(lazy(() => import('../views/pages/school/Presentations')));
 const PresentationForm       = Loadable(lazy(() => import('../views/pages/school/PresentationForm')));
 const PresentationViewer     = Loadable(lazy(() => import('../views/pages/school/PresentationViewer')));
+const AuditLogPanel          = Loadable(lazy(() => import('../views/pages/audit/AuditLogPanel')));
 
 // Layout wrappers
 const ProtectedLayout = () => (
@@ -143,17 +144,12 @@ const Routes = () =>
                     { path: '/users/teachers',        element: <UsersTeachers /> },
                     { path: '/account-settings',      element: <AccountSettings /> },
                     { path: '/sample-page',           element: <SamplePage /> },
-<<<<<<< Updated upstream
-                    { path: '/academic/register-group',        element: <GroupRegistration /> },
-                    { path: '/academic/my-groups',             element: <StudentGroups /> },
-                    { path: '/dashboard/presentations',        element: <Presentations /> },
-                    { path: '/dashboard/presentations/new',    element: <PresentationForm /> },
+                    { path: '/academic/register-group',          element: <GroupRegistration /> },
+                    { path: '/academic/my-groups',               element: <StudentGroups /> },
+                    { path: '/dashboard/presentations',          element: <Presentations /> },
+                    { path: '/dashboard/presentations/new',      element: <PresentationForm /> },
                     { path: '/dashboard/presentations/:id/edit', element: <PresentationForm /> },
-=======
-                    { path: '/academic/register-group', element: <GroupRegistration /> },
-                    { path: '/academic/my-groups',      element: <StudentGroups /> },
-                    { path: '/admin/audit-log',         element: <AuditLogPanel /> },
->>>>>>> Stashed changes
+                    { path: '/admin/audit-log',                  element: <AuditLogPanel /> },
                 ],
             }],
         },

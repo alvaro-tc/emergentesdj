@@ -792,9 +792,11 @@ export default function AuditLogPanel() {
                                     onChange={(e) => { setResourceFilter(e.target.value); setPage(0); }}
                                 >
                                     <MenuItem value="ALL">Todos los recursos</MenuItem>
-                                    {resourceOptions.map((opt) => (
-                                        <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-                                    ))}
+                                    {resourceOptions
+                                        .filter((opt) => opt.value !== 'criterion-scores:single' && opt.value !== 'task-scores:single')
+                                        .map((opt) => (
+                                            <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                        ))}
                                 </Select>
                             </FormControl>
 

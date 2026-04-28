@@ -27,6 +27,7 @@ def _get_registry():
             'enrollments':          (m.Enrollment,            s.EnrollmentSerializer),
             'evaluation-templates': (m.EvaluationTemplate,    s.EvaluationTemplateSerializer),
             'course-sub-criteria':  (m.CourseSubCriterion,    s.CourseSubCriterionSerializer),
+            'course-special-criteria': (m.CourseSpecialCriterion, s.CourseSpecialCriterionSerializer),
             'course-tasks':         (m.CourseTask,            s.CourseTaskSerializer),
             'task-scores':          (m.TaskScore,             s.TaskScoreSerializer),
             'criterion-scores':     (m.CriterionScore,        s.CriterionScoreSerializer),

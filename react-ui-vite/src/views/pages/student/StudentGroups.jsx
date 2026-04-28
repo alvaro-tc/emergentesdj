@@ -12,7 +12,7 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import PersonIcon from '@mui/icons-material/Person';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import GradeIcon from '@mui/icons-material/Grade';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CommentIcon from '@mui/icons-material/Comment';
 
 const CARD_GRADIENTS = [
     ['#1565C0', '#1976D2'],
@@ -159,19 +159,34 @@ const StudentGroups = () => {
                                 '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 8px 26px rgba(0,0,0,0.14)' },
                             }}>
                                 {/* Gradient header */}
-                                <Box sx={{ background: `linear-gradient(135deg, ${grad[0]} 0%, ${grad[1]} 100%)`, p: 2.5 }}>
-                                    <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
-                                        <Box flex={1} minWidth={0}>
-                                            <Typography
-                                                variant="overline"
-                                                sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem', lineHeight: 1.2, display: 'block' }}
-                                            >
-                                                Grupo #{group.group_number ?? '—'}
+                                <Box sx={{ background: `linear-gradient(135deg, ${grad[0]} 0%, ${grad[1]} 100%)`, p: 2 }}>
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        {/* Group number badge */}
+                                        <Box sx={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                            bgcolor: 'rgba(0,0,0,0.25)', borderRadius: 2, px: 1.5, py: 0.75,
+                                            border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0, minWidth: 52,
+                                        }}>
+                                            <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.6rem', fontWeight: 600, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                                Grupo
                                             </Typography>
+                                            <Typography sx={{ color: 'white', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.1 }}>
+                                                {group.group_number ?? '—'}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box flex={1} minWidth={0}>
                                             <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, lineHeight: 1.3 }} noWrap title={group.name}>
                                                 {group.name}
                                             </Typography>
+                                            <Chip
+                                                icon={<AssignmentIcon sx={{ fontSize: '0.8rem !important', color: 'white !important' }} />}
+                                                label={group.sub_criterion_name}
+                                                size="small"
+                                                sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', mt: 0.5, fontSize: '0.68rem', height: 22 }}
+                                            />
                                         </Box>
+
                                         {hasScore && (
                                             <Chip
                                                 label={scoreVal.toFixed(1)}
@@ -182,12 +197,6 @@ const StudentGroups = () => {
                                             />
                                         )}
                                     </Box>
-                                    <Chip
-                                        icon={<AssignmentIcon sx={{ fontSize: '0.8rem !important', color: 'white !important' }} />}
-                                        label={group.sub_criterion_name}
-                                        size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', mt: 1, fontSize: '0.68rem', height: 22 }}
-                                    />
                                 </Box>
 
                                 {/* Body */}
@@ -217,9 +226,18 @@ const StudentGroups = () => {
                                     {group.observations && (
                                         <>
                                             <Divider sx={{ my: 1.5 }} />
-                                            <Box display="flex" alignItems="flex-start" gap={0.5}>
-                                                <InfoOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary', mt: 0.15, flexShrink: 0 }} />
-                                                <Typography variant="caption" color="text.secondary">
+                                            <Box sx={{
+                                                bgcolor: 'warning.light', borderRadius: 1.5,
+                                                border: '1px solid', borderColor: 'warning.main',
+                                                p: 1.25,
+                                            }}>
+                                                <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+                                                    <CommentIcon sx={{ fontSize: 13, color: 'warning.dark' }} />
+                                                    <Typography variant="caption" fontWeight={700} color="warning.dark" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        Observaciones
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="body2" color="warning.dark" sx={{ lineHeight: 1.5 }}>
                                                     {group.observations}
                                                 </Typography>
                                             </Box>

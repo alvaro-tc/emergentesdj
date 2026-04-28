@@ -136,6 +136,8 @@ class CourseSubCriterion(models.Model):
     percentage = models.DecimalField(max_digits=5, decimal_places=2) # e.g. 50.00 for 50% of the parent criterion
     visible_on_gradesheet = models.BooleanField(default=True)
     editable_on_gradesheet = models.BooleanField(default=True)
+    visible_to_students = models.BooleanField(default=True, help_text="If false, students cannot see this sub-criterion or its score")
+    tasks_visible_to_students = models.BooleanField(default=True, help_text="If false, students only see the criterion total score, not individual task scores")
     is_project = models.BooleanField(default=False, help_text="If true, this criterion requires group projects instead of individual tasks")
     is_project_registration_open = models.BooleanField(default=False)
     registration_start = models.DateTimeField(null=True, blank=True)
@@ -152,6 +154,8 @@ class CourseSpecialCriterion(models.Model):
     percentage = models.DecimalField(max_digits=5, decimal_places=2) # e.g. 5.00 for 5 bonus points
     visible_on_gradesheet = models.BooleanField(default=True)
     editable_on_gradesheet = models.BooleanField(default=True)
+    visible_to_students = models.BooleanField(default=True, help_text="If false, students cannot see this special criterion or its score")
+    tasks_visible_to_students = models.BooleanField(default=True, help_text="If false, students only see the criterion total score, not individual task scores")
 
     def __str__(self):
         return f"{self.name} ({self.percentage} pts) - {self.course}"

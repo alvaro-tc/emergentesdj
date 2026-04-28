@@ -128,8 +128,10 @@ const Grades = () => {
     const [projects, setProjects] = useState([]);
     const [manageDialogOpen, setManageDialogOpen] = useState(false);
     const [currentProject, setCurrentProject] = useState(null);
-    const [showCriterionGrades, setShowCriterionGrades] = useState(true);
+    const [criterionGradeVisibility, setCriterionGradeVisibility] = useState({});
     const [showFinalGrade, setShowFinalGrade] = useState(true);
+
+    const isCriterionGradeVisible = (groupId) => criterionGradeVisibility[groupId] !== false;
     const [visibleColumns, setVisibleColumns] = useState({
         ci: true,
         paterno: true,
@@ -202,8 +204,9 @@ const Grades = () => {
         structure.forEach(group => {
             const visibleSubs = group.sub_criteria.filter(s => s.visible);
             const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
+            const showNote = isCriterionGradeVisible(group.id);
 
-            if ((visibleSubs.length + visibleSpecials.length) === 0 && !showCriterionGrades) return;
+            if ((visibleSubs.length + visibleSpecials.length) === 0 && !showNote) return;
 
             visibleSubs.forEach(sub => {
                 headers.push(`${sub.name} (${sub.percentage}%)`);
@@ -213,7 +216,7 @@ const Grades = () => {
                 headers.push(`(Extra) ${spec.name}`);
                 dataKeys.push(spec.id);
             });
-            if (showCriterionGrades) {
+            if (showNote) {
                 headers.push(`Nota ${group.name} (${group.weight}%)`);
                 dataKeys.push(`criterion-${group.id}`); // logical key
             }
@@ -237,8 +240,9 @@ const Grades = () => {
             structure.forEach(group => {
                 const visibleSubs = group.sub_criteria.filter(s => s.visible);
                 const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
+                const showNote = isCriterionGradeVisible(group.id);
 
-                if ((visibleSubs.length + visibleSpecials.length) === 0 && !showCriterionGrades) return;
+                if ((visibleSubs.length + visibleSpecials.length) === 0 && !showNote) return;
 
                 visibleSubs.forEach(sub => {
                     rowData.push(row.grades[sub.id] ? parseFloat(row.grades[sub.id]).toFixed(2) : '-');
@@ -246,7 +250,7 @@ const Grades = () => {
                 visibleSpecials.forEach(spec => {
                     rowData.push(row.grades[spec.id] ? `+${parseFloat(row.grades[spec.id]).toFixed(2)}` : '-');
                 });
-                if (showCriterionGrades) {
+                if (showNote) {
                     const criterionGrade = row._criterionGrades && row._criterionGrades[group.id]
                         ? row._criterionGrades[group.id].grade
                         : null;
@@ -312,10 +316,18 @@ const Grades = () => {
         if (s) params.set('search', s);
         axios.get(`${configData.API_SERVER}criterion-scores/gradesheet/?${params}`)
             .then(response => {
-                setStructure(response.data.structure || []);
+                const newStructure = response.data.structure || [];
+                setStructure(newStructure);
                 setRows(response.data.rows || []);
                 setTotalCount(response.data.pagination?.total_count ?? 0);
                 setChanges({});
+                setCriterionGradeVisibility(prev => {
+                    const next = { ...prev };
+                    newStructure.forEach(g => {
+                        if (next[g.id] === undefined) next[g.id] = true;
+                    });
+                    return next;
+                });
             })
             .catch(error => {
                 console.error(error);
@@ -461,8 +473,9 @@ const Grades = () => {
         structure.forEach(group => {
             const visibleSubs = group.sub_criteria.filter(s => s.visible);
             const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
+            const showNote = isCriterionGradeVisible(group.id);
 
-            if ((visibleSubs.length + visibleSpecials.length) === 0 && !showCriterionGrades) return;
+            if ((visibleSubs.length + visibleSpecials.length) === 0 && !showNote) return;
 
             visibleSubs.forEach(sub => {
                 headers.push(`${sub.name} (${sub.percentage}%)`);
@@ -472,7 +485,7 @@ const Grades = () => {
                 headers.push(`(Extra) ${spec.name}`);
                 dataKeys.push(spec.id);
             });
-            if (showCriterionGrades) {
+            if (showNote) {
                 headers.push(`Nota ${group.name} (${group.weight}%)`);
                 dataKeys.push(`criterion-${group.id}`); // logical key
             }
@@ -496,8 +509,9 @@ const Grades = () => {
             structure.forEach(group => {
                 const visibleSubs = group.sub_criteria.filter(s => s.visible);
                 const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
+                const showNote = isCriterionGradeVisible(group.id);
 
-                if ((visibleSubs.length + visibleSpecials.length) === 0 && !showCriterionGrades) return;
+                if ((visibleSubs.length + visibleSpecials.length) === 0 && !showNote) return;
 
                 visibleSubs.forEach(sub => {
                     rowData.push(row.grades[sub.id] ? parseFloat(row.grades[sub.id]).toFixed(2) : '-');
@@ -505,7 +519,7 @@ const Grades = () => {
                 visibleSpecials.forEach(spec => {
                     rowData.push(row.grades[spec.id] ? `+${parseFloat(row.grades[spec.id]).toFixed(2)}` : '-');
                 });
-                if (showCriterionGrades) {
+                if (showNote) {
                     const criterionGrade = row._criterionGrades && row._criterionGrades[group.id]
                         ? row._criterionGrades[group.id].grade
                         : null;
@@ -662,9 +676,10 @@ const Grades = () => {
                                         const visibleSubCount = group.sub_criteria.filter(s => s.visible).length;
                                         const visibleSpecialCount = (group.special_criteria || []).filter(s => s.visible).length;
                                         const totalVisible = visibleSubCount + visibleSpecialCount;
+                                        const showNote = isCriterionGradeVisible(group.id);
 
-                                        // Show nothing if no visible columns AND criterion grades are hidden
-                                        if (totalVisible === 0 && !showCriterionGrades) return null;
+                                        // Show nothing if no visible columns AND criterion grade is hidden
+                                        if (totalVisible === 0 && !showNote) return null;
 
                                         // Alternating background colors for groups
                                         const bgColor = index % 2 === 0 ? '#e3f2fd' : '#f3e5f5';
@@ -686,7 +701,7 @@ const Grades = () => {
                                                         {group.name} <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({group.weight} Pts)</span>
                                                     </TableCell>
                                                 )}
-                                                {showCriterionGrades && <TableCell rowSpan={2} align="center" style={{ backgroundColor: bgColor, fontWeight: 'bold', borderRight: '2px solid #aaa', borderTop: '2px solid #aaa', borderLeft: totalVisible === 0 ? '2px solid #aaa' : '1px solid #666', minWidth: 80 }}>Nota<br />{group.name}</TableCell>}
+                                                {showNote && <TableCell rowSpan={2} align="center" style={{ backgroundColor: bgColor, fontWeight: 'bold', borderRight: '2px solid #aaa', borderTop: '2px solid #aaa', borderLeft: totalVisible === 0 ? '2px solid #aaa' : '1px solid #666', minWidth: 80 }}>Nota<br />{group.name}</TableCell>}
                                             </React.Fragment>
                                         );
                                     })}
@@ -698,14 +713,15 @@ const Grades = () => {
                                         const visibleSubs = group.sub_criteria.filter(s => s.visible);
                                         const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
                                         const totalVisible = visibleSubs.length + visibleSpecials.length;
+                                        const showNote = isCriterionGradeVisible(group.id);
 
-                                        // Skip if no visible columns AND criterion grades are hidden
-                                        if (totalVisible === 0 && !showCriterionGrades) return null;
+                                        // Skip if no visible columns AND criterion grade is hidden
+                                        if (totalVisible === 0 && !showNote) return null;
 
                                         return (
                                             <React.Fragment key={group.id}>
                                                 {visibleSubs.map((sub, sIdx) => {
-                                                    const isLast = sIdx === visibleSubs.length - 1 && visibleSpecials.length === 0 && !showCriterionGrades;
+                                                    const isLast = sIdx === visibleSubs.length - 1 && visibleSpecials.length === 0 && !showNote;
                                                     return (
                                                         <TableCell
                                                             key={sub.id}
@@ -723,7 +739,7 @@ const Grades = () => {
                                                     );
                                                 })}
                                                 {visibleSpecials.map((spec, specIdx) => {
-                                                    const isLast = specIdx === visibleSpecials.length - 1 && !showCriterionGrades;
+                                                    const isLast = specIdx === visibleSpecials.length - 1 && !showNote;
                                                     return (
                                                         <TableCell
                                                             key={spec.id}
@@ -775,14 +791,18 @@ const Grades = () => {
                                             {structure.map((group, groupIndex) => {
                                                 const visibleSubs = group.sub_criteria.filter(sub => sub.visible);
                                                 const visibleSpecials = (group.special_criteria || []).filter(spec => spec.visible);
+                                                const showNote = isCriterionGradeVisible(group.id);
+                                                const totalVisible = visibleSubs.length + visibleSpecials.length;
                                                 const bgColor = groupIndex % 2 === 0 ? '#bbdefb' : '#e1bee7';
+
+                                                if (totalVisible === 0 && !showNote) return null;
 
                                                 const criterionData = row._criterionGrades[group.id] || { formatted: '-', grade: 0 };
 
                                                 return (
                                                     <React.Fragment key={group.id}>
                                                         {visibleSubs.map((sub, sIdx) => {
-                                                            const isLast = sIdx === visibleSubs.length - 1 && visibleSpecials.length === 0 && !showCriterionGrades;
+                                                            const isLast = sIdx === visibleSubs.length - 1 && visibleSpecials.length === 0 && !showNote;
                                                             return (
                                                                 <TableCell
                                                                     key={sub.id}
@@ -858,7 +878,7 @@ const Grades = () => {
                                                             );
                                                         })}
                                                         {visibleSpecials.map((spec, specIdx) => {
-                                                            const isLast = specIdx === visibleSpecials.length - 1 && !showCriterionGrades;
+                                                            const isLast = specIdx === visibleSpecials.length - 1 && !showNote;
                                                             return (
                                                                 <TableCell
                                                                     key={spec.id}
@@ -907,7 +927,7 @@ const Grades = () => {
                                                             );
                                                         })}
                                                         {/* Criterion Grade Column */}
-                                                        {showCriterionGrades && (
+                                                        {showNote && (
                                                             <TableCell align="center" style={{ backgroundColor: bgColor, fontWeight: 'bold', borderRight: '2px solid #aaa', borderLeft: 'none' }}>
                                                                 <Typography variant="body2" style={{ fontWeight: 'bold', color: '#1565c0' }}>
                                                                     {criterionData.formatted}
@@ -1077,8 +1097,8 @@ const Grades = () => {
                 onClose={() => setSettingsOpen(false)}
                 structure={structure}
                 onRefresh={fetchGradesheet}
-                showCriterionGrades={showCriterionGrades}
-                setShowCriterionGrades={setShowCriterionGrades}
+                criterionGradeVisibility={criterionGradeVisibility}
+                setCriterionGradeVisibility={setCriterionGradeVisibility}
                 showFinalGrade={showFinalGrade}
                 setShowFinalGrade={setShowFinalGrade}
                 visibleColumns={visibleColumns}

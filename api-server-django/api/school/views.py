@@ -750,8 +750,8 @@ class ReportViewSet(viewsets.ViewSet):
                     # Calculate Criteria Grades (Hierarchical) - Aligned with Gradesheet
                     criteria_grades = []
                     
-                    # Fetch all sub-criteria for the course, grouped by parent
-                    sub_criteria = models.CourseSubCriterion.objects.filter(course=course).select_related('parent_criterion').annotate(
+                    # Fetch all sub-criteria for the course visible to students, grouped by parent
+                    sub_criteria = models.CourseSubCriterion.objects.filter(course=course, visible_to_students=True).select_related('parent_criterion').annotate(
                         has_tasks=Exists(models.CourseTask.objects.filter(sub_criterion=OuterRef('pk'))),
                         has_projects=Exists(models.Project.objects.filter(sub_criterion=OuterRef('pk')))
                     ).order_by('parent_criterion__id', 'id')
@@ -777,7 +777,7 @@ class ReportViewSet(viewsets.ViewSet):
                             }
                         
                         sub_tasks_list = []
-                        if sub.has_tasks:
+                        if sub.has_tasks and sub.tasks_visible_to_students:
                              tasks = models.CourseTask.objects.filter(sub_criterion=sub)
                              task_scores = models.TaskScore.objects.filter(
                                  enrollment=enrollment,
@@ -827,8 +827,8 @@ class ReportViewSet(viewsets.ViewSet):
                         grouped_criteria[parent.id]['sum_max_points'] += sub_max
                         grouped_criteria[parent.id]['raw_score'] += sub_score
 
-                    # 2. Process Special Criteria (Extra Points) - Grouped under Parent
-                    special_criteria = models.CourseSpecialCriterion.objects.filter(course=course).select_related('parent_criterion').annotate(
+                    # 2. Process Special Criteria (Extra Points) - Grouped under Parent, only visible to students
+                    special_criteria = models.CourseSpecialCriterion.objects.filter(course=course, visible_to_students=True).select_related('parent_criterion').annotate(
                         has_tasks=Exists(models.CourseTask.objects.filter(special_criterion=OuterRef('pk')))
                     ).order_by('id')
 
@@ -844,17 +844,18 @@ class ReportViewSet(viewsets.ViewSet):
                                  task__special_criterion=spec
                              )
                              score_map_tasks = {ts.task_id: ts.score for ts in task_scores}
-                             
+
                              total_weight = 0
                              weighted_sum = 0
-                             
+
                              for task in tasks:
                                  score_val = score_map_tasks.get(task.id, 0)
-                                 sub_tasks_list.append({
-                                     'name': task.name,
-                                     'weight': float(task.weight),
-                                     'score': float(score_val)
-                                 })
+                                 if spec.tasks_visible_to_students:
+                                     sub_tasks_list.append({
+                                         'name': task.name,
+                                         'weight': float(task.weight),
+                                         'score': float(score_val)
+                                     })
                                  weighted_sum += score_val * task.weight
                                  total_weight += task.weight
                              
@@ -986,21 +987,23 @@ class CourseSubCriterionViewSet(AuditMixin, viewsets.ModelViewSet):
             crit_id = u.get('id')
             visible = u.get('visible')
             editable = u.get('editable')
-            
+            visible_to_students = u.get('visible_to_students')
+            tasks_visible_to_students = u.get('tasks_visible_to_students')
+
             try:
                 crit = models.CourseSubCriterion.objects.get(id=crit_id)
                 if visible is not None: crit.visible_on_gradesheet = visible
                 if editable is not None: crit.editable_on_gradesheet = editable
+                if visible_to_students is not None: crit.visible_to_students = visible_to_students
+                if tasks_visible_to_students is not None: crit.tasks_visible_to_students = tasks_visible_to_students
                 crit.save()
                 saved += 1
             except models.CourseSubCriterion.DoesNotExist:
-                print(f"DEBUG: Criterion {crit_id} not found")
                 continue
-        
-        print(f"DEBUG: Saved {saved} updates")
+
         return Response({"saved": saved})
 
-class CourseSpecialCriterionViewSet(viewsets.ModelViewSet):
+class CourseSpecialCriterionViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.CourseSpecialCriterion.objects.all()
     serializer_class = serializers.CourseSpecialCriterionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1031,19 +1034,24 @@ class CourseSpecialCriterionViewSet(viewsets.ModelViewSet):
         """Update visibility and editability for multiple special criteria."""
         updates = request.data.get('updates', [])
         for update in updates:
-            # Extract special- prefix from id if present
             spec_id = update.get('id', '')
             if isinstance(spec_id, str) and spec_id.startswith('special-'):
                 spec_id = spec_id.replace('special-', '')
-            
+
             try:
                 spec = models.CourseSpecialCriterion.objects.get(id=spec_id)
-                spec.visible_on_gradesheet = update.get('visible', spec.visible_on_gradesheet)
-                spec.editable_on_gradesheet = update.get('editable', spec.editable_on_gradesheet)
+                if update.get('visible') is not None:
+                    spec.visible_on_gradesheet = update['visible']
+                if update.get('editable') is not None:
+                    spec.editable_on_gradesheet = update['editable']
+                if update.get('visible_to_students') is not None:
+                    spec.visible_to_students = update['visible_to_students']
+                if update.get('tasks_visible_to_students') is not None:
+                    spec.tasks_visible_to_students = update['tasks_visible_to_students']
                 spec.save()
             except models.CourseSpecialCriterion.DoesNotExist:
                 pass
-        
+
         return Response({'status': 'success'})
 
 class CriterionScoreViewSet(AuditMixin, viewsets.ModelViewSet):
@@ -1097,6 +1105,8 @@ class CriterionScoreViewSet(AuditMixin, viewsets.ModelViewSet):
                 "percentage": sc.percentage,
                 "visible": sc.visible_on_gradesheet,
                 "editable": sc.editable_on_gradesheet,
+                "visible_to_students": sc.visible_to_students,
+                "tasks_visible_to_students": sc.tasks_visible_to_students,
                 "has_tasks": sc.has_tasks,
                 "has_projects": sc.has_projects,
                 "is_special": False
@@ -1126,6 +1136,8 @@ class CriterionScoreViewSet(AuditMixin, viewsets.ModelViewSet):
                 "percentage": spec.percentage,
                 "visible": spec.visible_on_gradesheet,
                 "editable": spec.editable_on_gradesheet,
+                "visible_to_students": spec.visible_to_students,
+                "tasks_visible_to_students": spec.tasks_visible_to_students,
                 "has_tasks": spec.has_tasks,
                 "has_projects": False,
                 "is_special": True
@@ -1562,6 +1574,10 @@ class ProjectViewSet(AuditMixin, viewsets.ModelViewSet):
         return queryset.order_by('-id')
 
     def perform_create(self, serializer):
+        sub_criterion_id = serializer.validated_data.get('sub_criterion')
+        if serializer.validated_data.get('group_number') is None and sub_criterion_id:
+            next_number = models.Project.objects.filter(sub_criterion=sub_criterion_id).count() + 1
+            serializer.validated_data['group_number'] = next_number
         project = serializer.save()
         self.sync_project_grades(project)
 

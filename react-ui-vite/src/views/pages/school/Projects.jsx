@@ -443,7 +443,7 @@ const Projects = () => {
     const filteredProjects = tableSearch
         ? bySubCriterion.filter(p => {
             const q = tableSearch.toLowerCase();
-            if (String(p.id).includes(q)) return true;
+            if (p.group_number != null && String(p.group_number).includes(q)) return true;
             if ((p.name || '').toLowerCase().includes(q)) return true;
             if (p.member_details?.some(m => {
                 const sd = m.student_details;
@@ -569,7 +569,7 @@ const Projects = () => {
                     </Box>
                     <TextField
                         size="small"
-                        placeholder="Buscar por ID, nombre o miembro..."
+                        placeholder="Buscar por #grupo, nombre o miembro..."
                         value={tableSearch}
                         onChange={(e) => setTableSearch(e.target.value)}
                         sx={{ width: 300 }}
@@ -588,8 +588,7 @@ const Projects = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>ID</TableCell>
-                                <TableCell>Grupo</TableCell>
+                                <TableCell>#</TableCell>
                                 <TableCell>Nombre del Proyecto</TableCell>
                                 <TableCell>Miembros</TableCell>
                                 <TableCell>
@@ -608,11 +607,8 @@ const Projects = () => {
                             {filteredProjects.map(project => (
                                 <TableRow key={project.id} hover>
                                     <TableCell>
-                                        <Typography variant="caption" color="textSecondary">#{project.id}</Typography>
-                                    </TableCell>
-                                    <TableCell>
                                         {project.group_number != null
-                                            ? <Chip label={`Grupo ${project.group_number}`} size="small" color="primary" variant="outlined" />
+                                            ? <Chip label={project.group_number} size="small" color="primary" />
                                             : <Typography variant="caption" color="textSecondary">—</Typography>}
                                     </TableCell>
                                     <TableCell>
@@ -671,7 +667,7 @@ const Projects = () => {
                             ))}
                             {filteredProjects.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={6} align="center">
                                         {selectedSubCriterion
                                             ? 'No hay proyectos para este sub-criterio.'
                                             : 'No hay proyectos para este curso.'}

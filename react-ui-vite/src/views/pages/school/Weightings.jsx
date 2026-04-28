@@ -5,7 +5,7 @@ import {
     IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Tooltip, LinearProgress, Chip, Snackbar
 } from '@mui/material';
 import MainCard from '../../../ui-component/cards/MainCard';
-import { IconTrash, IconEdit, IconPlus, IconLock, IconStar } from '@tabler/icons-react';
+import { IconTrash, IconEdit, IconPlus, IconLock, IconStar, IconEye, IconEyeOff, IconClipboardList, IconClipboardOff } from '@tabler/icons-react';
 import axios from 'axios';
 import configData from '../../../config';
 
@@ -225,6 +225,54 @@ const Weightings = () => {
             .catch(err => console.error("Error deleting special criterion:", err));
     };
 
+    // --- Student Visibility Handlers ---
+
+    const handleToggleStudentVisibility = (id, currentVal, isSpecial = false) => {
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        const newVal = !currentVal;
+
+        if (isSpecial) {
+            const actualId = typeof id === 'string' && id.startsWith('special-') ? id : `special-${id}`;
+            axios.post(`${configData.API_SERVER}course-special-criteria/bulk_update_settings/`, {
+                updates: [{ id: actualId, visible_to_students: newVal }]
+            }).then(() => {
+                setSpecialCriteria(prev => prev.map(sc => sc.id === (typeof id === 'string' ? parseInt(id.replace('special-', '')) : id)
+                    ? { ...sc, visible_to_students: newVal } : sc));
+                showSnackbar(newVal ? 'Ahora visible para estudiantes' : 'Oculto para estudiantes', 'success');
+            }).catch(() => showSnackbar('Error al guardar visibilidad', 'error'));
+        } else {
+            axios.post(`${configData.API_SERVER}course-sub-criteria/bulk_update_settings/`, {
+                updates: [{ id, visible_to_students: newVal }]
+            }).then(() => {
+                setSubCriteria(prev => prev.map(sc => sc.id === id ? { ...sc, visible_to_students: newVal } : sc));
+                showSnackbar(newVal ? 'Ahora visible para estudiantes' : 'Oculto para estudiantes', 'success');
+            }).catch(() => showSnackbar('Error al guardar visibilidad', 'error'));
+        }
+    };
+
+    const handleToggleTaskVisibility = (id, currentVal, isSpecial = false) => {
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        const newVal = !currentVal;
+
+        if (isSpecial) {
+            const actualId = typeof id === 'string' && id.startsWith('special-') ? id : `special-${id}`;
+            axios.post(`${configData.API_SERVER}course-special-criteria/bulk_update_settings/`, {
+                updates: [{ id: actualId, tasks_visible_to_students: newVal }]
+            }).then(() => {
+                setSpecialCriteria(prev => prev.map(sc => sc.id === (typeof id === 'string' ? parseInt(id.replace('special-', '')) : id)
+                    ? { ...sc, tasks_visible_to_students: newVal } : sc));
+                showSnackbar(newVal ? 'Tareas visibles para estudiantes' : 'Tareas ocultas para estudiantes', 'success');
+            }).catch(() => showSnackbar('Error al guardar visibilidad de tareas', 'error'));
+        } else {
+            axios.post(`${configData.API_SERVER}course-sub-criteria/bulk_update_settings/`, {
+                updates: [{ id, tasks_visible_to_students: newVal }]
+            }).then(() => {
+                setSubCriteria(prev => prev.map(sc => sc.id === id ? { ...sc, tasks_visible_to_students: newVal } : sc));
+                showSnackbar(newVal ? 'Tareas visibles para estudiantes' : 'Tareas ocultas para estudiantes', 'success');
+            }).catch(() => showSnackbar('Error al guardar visibilidad de tareas', 'error'));
+        }
+    };
+
 
     if (!activeCourse) {
         return (
@@ -297,6 +345,11 @@ const Weightings = () => {
                                         <TableRow>
                                             <TableCell>Nombre</TableCell>
                                             <TableCell align="right">Valor</TableCell>
+                                            <TableCell align="center">
+                                                <Tooltip title="Visibilidad para estudiantes y revisión de tareas">
+                                                    <span>Visibilidad Alumno</span>
+                                                </Tooltip>
+                                            </TableCell>
                                             <TableCell align="center">Acciones</TableCell>
                                         </TableRow>
                                     </TableHead>
@@ -304,7 +357,7 @@ const Weightings = () => {
                                         {/* Regular SubCriteria */}
                                         {criterionSubCriteria.length === 0 && criterionSpecialCriteria.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={3} align="center">No hay sub-criterios definidos.</TableCell>
+                                                <TableCell colSpan={4} align="center">No hay sub-criterios definidos.</TableCell>
                                             </TableRow>
                                         ) : (
                                             <>
@@ -312,6 +365,29 @@ const Weightings = () => {
                                                     <TableRow key={`sub-${sub.id}`}>
                                                         <TableCell>{sub.name}</TableCell>
                                                         <TableCell align="right">{sub.percentage} Pts</TableCell>
+                                                        <TableCell align="center">
+                                                            <Tooltip title={sub.visible_to_students !== false ? 'Visible para estudiantes (click para ocultar)' : 'Oculto para estudiantes (click para mostrar)'}>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleToggleStudentVisibility(sub.id, sub.visible_to_students !== false)}
+                                                                    color={sub.visible_to_students !== false ? 'primary' : 'default'}
+                                                                >
+                                                                    {sub.visible_to_students !== false ? <IconEye size="1.1rem" /> : <IconEyeOff size="1.1rem" />}
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            {sub.has_tasks && (
+                                                                <Tooltip title={sub.tasks_visible_to_students !== false ? 'Tareas revisables por estudiantes (click para ocultar detalle)' : 'Solo nota total visible (click para permitir revisión)'}>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={() => handleToggleTaskVisibility(sub.id, sub.tasks_visible_to_students !== false)}
+                                                                        color={sub.tasks_visible_to_students !== false ? 'success' : 'default'}
+                                                                        disabled={sub.visible_to_students === false}
+                                                                    >
+                                                                        {sub.tasks_visible_to_students !== false ? <IconClipboardList size="1.1rem" /> : <IconClipboardOff size="1.1rem" />}
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell align="center">
                                                             <Tooltip title="Editar">
                                                                 <IconButton color="primary" onClick={() => handleOpenDialog(criterion.id, sub)}>
@@ -338,6 +414,29 @@ const Weightings = () => {
                                                         </TableCell>
                                                         <TableCell align="right" style={{ color: '#e65100', fontWeight: 'bold' }}>
                                                             +{special.percentage} pts
+                                                        </TableCell>
+                                                        <TableCell align="center">
+                                                            <Tooltip title={special.visible_to_students !== false ? 'Visible para estudiantes (click para ocultar)' : 'Oculto para estudiantes (click para mostrar)'}>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleToggleStudentVisibility(special.id, special.visible_to_students !== false, true)}
+                                                                    color={special.visible_to_students !== false ? 'primary' : 'default'}
+                                                                >
+                                                                    {special.visible_to_students !== false ? <IconEye size="1.1rem" /> : <IconEyeOff size="1.1rem" />}
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            {special.has_tasks && (
+                                                                <Tooltip title={special.tasks_visible_to_students !== false ? 'Tareas revisables por estudiantes (click para ocultar detalle)' : 'Solo nota total visible (click para permitir revisión)'}>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={() => handleToggleTaskVisibility(special.id, special.tasks_visible_to_students !== false, true)}
+                                                                        color={special.tasks_visible_to_students !== false ? 'success' : 'default'}
+                                                                        disabled={special.visible_to_students === false}
+                                                                    >
+                                                                        {special.tasks_visible_to_students !== false ? <IconClipboardList size="1.1rem" /> : <IconClipboardOff size="1.1rem" />}
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell align="center">
                                                             <Tooltip title="Editar">
