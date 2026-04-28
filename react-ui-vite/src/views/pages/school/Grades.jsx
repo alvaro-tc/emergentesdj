@@ -1035,7 +1035,7 @@ const Grades = () => {
                             onPageChange={handlePageChange}
                             rowsPerPage={pageSize}
                             onRowsPerPageChange={handlePageSizeChange}
-                            rowsPerPageOptions={[15, 30, 50]}
+                            rowsPerPageOptions={[15, 30, 50, 100, 200]}
                             labelRowsPerPage="Por página:"
                             labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
                             sx={{ '& .MuiTablePagination-toolbar': { flexWrap: 'wrap', justifyContent: 'center' } }}

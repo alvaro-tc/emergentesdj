@@ -1068,7 +1068,7 @@ class CriterionScoreViewSet(AuditMixin, viewsets.ModelViewSet):
         search = request.query_params.get('search', '').strip()
         try:
             page = max(1, int(request.query_params.get('page', 1)))
-            page_size = min(100, max(1, int(request.query_params.get('page_size', 30))))
+            page_size = min(200, max(1, int(request.query_params.get('page_size', 30))))
         except (ValueError, TypeError):
             page, page_size = 1, 30
 
