@@ -33,7 +33,7 @@ import {
     SpeedDialIcon
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
-import { IconSearch, IconDeviceFloppy, IconSettings, IconEye, IconNotebook, IconDownload, IconChevronDown, IconDotsVertical } from '@tabler/icons-react';
+import { IconSearch, IconDeviceFloppy, IconSettings, IconEye, IconNotebook, IconDownload, IconUpload, IconChevronDown, IconDotsVertical } from '@tabler/icons-react';
 import MainCard from './../../../ui-component/cards/MainCard';
 import axios from 'axios';
 import configData from '../../../config';
@@ -44,6 +44,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import ExportGradesDialog from './ExportGradesDialog';
+import ImportGradesDialog from './ImportGradesDialog';
 import StudentTaskModal from './components/StudentTaskModal';
 import StudentDetailModal from './components/StudentDetailModal';
 
@@ -139,6 +140,7 @@ const Grades = () => {
         nombre: true
     });
     const [exportDialogOpen, setExportDialogOpen] = useState(false);
+    const [importDialogOpen, setImportDialogOpen] = useState(false);
 
     // Modal state for Task Editing
     const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -607,6 +609,13 @@ const Grades = () => {
                 onClose={() => setExportDialogOpen(false)}
                 onExport={handleExport}
             />
+            <ImportGradesDialog
+                open={importDialogOpen}
+                onClose={() => setImportDialogOpen(false)}
+                structure={structure}
+                activeCourse={activeCourse}
+                onSuccess={() => fetchGradesheet(page, pageSize, searchQuery)}
+            />
             <CardContent>
                 <Grid container spacing={2} alignItems="center" justifyContent="space-between">
                     <Grid
@@ -632,6 +641,17 @@ const Grades = () => {
                     </Grid>
                     {!isMobile && (
                         <Grid>
+                            <Tooltip title="Importar Calificaciones">
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => setImportDialogOpen(true)}
+                                    startIcon={<IconUpload />}
+                                    style={{ marginRight: 8 }}
+                                >
+                                    Importar
+                                </Button>
+                            </Tooltip>
                             <Tooltip title="Exportar Calificaciones">
                                 <Button
                                     variant="outlined"
