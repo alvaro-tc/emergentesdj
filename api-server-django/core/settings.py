@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "api.publications",
     "api.web_config",
     "api.blog",
+    "api.audit",
 ]
 
 MIDDLEWARE = [

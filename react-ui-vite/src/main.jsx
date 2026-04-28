@@ -10,6 +10,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persister } from './store';
 import App from './App';
 import config from './config';
+import { AuditLogProvider } from './context/AuditLogContext';
 
 // style + assets
 import 'react-perfect-scrollbar/dist/css/styles.css';
@@ -22,7 +23,9 @@ root.render(
     <Provider store={store}>
         <PersistGate loading={null} persistor={persister}>
             <BrowserRouter basename={config.basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                <App />
+                <AuditLogProvider>
+                    <App />
+                </AuditLogProvider>
             </BrowserRouter>
         </PersistGate>
     </Provider>

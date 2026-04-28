@@ -58,6 +58,10 @@ router.register(r"project-registration", school_views.StudentProjectRegistration
 router.register(r"student-course-registration", school_views.StudentCourseRegistrationViewSet, basename="student-course-registration")
 router.register(r"registration-requests", school_views.RegistrationRequestViewSet, basename="registration-requests")
 
+# Audit
+from api.audit.views import AuditLogViewSet
+router.register(r"audit-logs", AuditLogViewSet, basename="audit-logs")
+
 urlpatterns = [
     *router.urls,
 ]

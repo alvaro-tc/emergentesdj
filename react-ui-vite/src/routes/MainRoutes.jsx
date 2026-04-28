@@ -29,6 +29,7 @@ const AccountSettings = Loadable(lazy(() => import('../views/pages/account/Accou
 const SamplePage = Loadable(lazy(() => import('../views/sample-page')));
 const GroupRegistration = Loadable(lazy(() => import('../views/pages/student/GroupRegistration')));
 const StudentGroups = Loadable(lazy(() => import('../views/pages/student/StudentGroups')));
+const AuditLogPanel = Loadable(lazy(() => import('../views/pages/audit/AuditLogPanel')));
 
 const ProtectedLayout = () => (
     <MainLayout>
@@ -65,6 +66,7 @@ const MainRoutes = () => (
                 <Route path="/sample-page" element={<SamplePage />} />
                 <Route path="/academic/register-group" element={<GroupRegistration />} />
                 <Route path="/academic/my-groups" element={<StudentGroups />} />
+                <Route path="/admin/audit-log" element={<AuditLogPanel />} />
             </Route>
         </Route>
     </Routes>

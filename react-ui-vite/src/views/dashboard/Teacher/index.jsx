@@ -7,7 +7,6 @@ import MainCard from '../../../ui-component/cards/MainCard';
 import { gridSpacing } from '../../../store/constant';
 import { IconPencil, IconSettings, IconUserPlus, IconListCheck, IconBulb, IconScale, IconChartBar } from '@tabler/icons-react';
 import CourseDialog from '../../pages/school/CourseDialog';
-import CourseStatsPanel from '../components/CourseStatsPanel';
 import * as ScheduleUtils from '../../../utils/scheduleUtils';
 import { useNavigate } from 'react-router-dom';
 import { SET_ACTIVE_COURSE } from '../../../store/actions';
@@ -73,16 +72,7 @@ const TeacherDashboard = () => {
 
     return (
         <Grid container spacing={gridSpacing}>
-            {activeCourse?.id && (
-                <Grid size={12}>
-                    <CourseStatsPanel
-                        courseId={activeCourse.id}
-                        courseName={`${activeCourse.subject_details?.name ?? ''} — Paralelo ${activeCourse.parallel ?? ''}`}
-                        token={account.token}
-                    />
-                </Grid>
-            )}
-            <Grid size={12}>
+<Grid size={12}>
                 <Typography variant="h2" gutterBottom>Mis Cursos Asignados</Typography>
             </Grid>
             {courses.length > 0 ? (

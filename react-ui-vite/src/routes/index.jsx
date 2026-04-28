@@ -143,11 +143,17 @@ const Routes = () =>
                     { path: '/users/teachers',        element: <UsersTeachers /> },
                     { path: '/account-settings',      element: <AccountSettings /> },
                     { path: '/sample-page',           element: <SamplePage /> },
+<<<<<<< Updated upstream
                     { path: '/academic/register-group',        element: <GroupRegistration /> },
                     { path: '/academic/my-groups',             element: <StudentGroups /> },
                     { path: '/dashboard/presentations',        element: <Presentations /> },
                     { path: '/dashboard/presentations/new',    element: <PresentationForm /> },
                     { path: '/dashboard/presentations/:id/edit', element: <PresentationForm /> },
+=======
+                    { path: '/academic/register-group', element: <GroupRegistration /> },
+                    { path: '/academic/my-groups',      element: <StudentGroups /> },
+                    { path: '/admin/audit-log',         element: <AuditLogPanel /> },
+>>>>>>> Stashed changes
                 ],
             }],
         },

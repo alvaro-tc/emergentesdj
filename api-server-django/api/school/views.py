@@ -7,26 +7,27 @@ from . import serializers
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
+from api.audit.mixins import AuditMixin
 
 User = get_user_model()
 
-class EvaluationTemplateViewSet(viewsets.ModelViewSet):
+class EvaluationTemplateViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.EvaluationTemplate.objects.all()
     serializer_class = serializers.EvaluationTemplateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class AcademicPeriodViewSet(viewsets.ModelViewSet):
+class AcademicPeriodViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.AcademicPeriod.objects.all()
     serializer_class = serializers.AcademicPeriodSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
-class ProgramViewSet(viewsets.ModelViewSet):
+class ProgramViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.Program.objects.all()
     serializer_class = serializers.ProgramSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class SubjectViewSet(viewsets.ModelViewSet):
+class SubjectViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.Subject.objects.all()
     serializer_class = serializers.SubjectSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -101,7 +102,7 @@ def recalculate_sub_criterion_scores(sub_criterion_id, enrollment_ids=None):
         print(f"Error recalculating averages: {e}")
 
 
-class CourseViewSet(viewsets.ModelViewSet):
+class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.Course.objects.all()
     serializer_class = serializers.CourseSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -211,7 +212,7 @@ class EnrollmentPagination(PageNumberPagination):
     max_page_size = 200
 
 
-class EnrollmentViewSet(viewsets.ModelViewSet):
+class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.Enrollment.objects.all()
     serializer_class = serializers.EnrollmentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -938,7 +939,7 @@ class ReportViewSet(viewsets.ViewSet):
 
         return Response(data)
 
-class CourseSubCriterionViewSet(viewsets.ModelViewSet):
+class CourseSubCriterionViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.CourseSubCriterion.objects.all()
     serializer_class = serializers.CourseSubCriterionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1045,7 +1046,7 @@ class CourseSpecialCriterionViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'success'})
 
-class CriterionScoreViewSet(viewsets.ModelViewSet):
+class CriterionScoreViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.CriterionScore.objects.all()
     serializer_class = serializers.CriterionScoreSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1232,29 +1233,57 @@ class CriterionScoreViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def bulk_save(self, request):
         # Expects: { "updates": [ {"enrollment_id": 1, "criterion_id": 2, "score": 50}, ... ] }
+        from api.audit.mixins import save_bulk_audit
         updates = request.data.get('updates', [])
+
+        # Capture snapshot_before for each affected score
+        snapshot_before = []
+        for u in updates:
+            try:
+                crit_raw = u.get('criterion_id')
+                enr_id = u.get('enrollment_id')
+                if str(crit_raw).startswith('special-'):
+                    actual_id = int(str(crit_raw).replace('special-', ''))
+                    existing = models.SpecialCriterionScore.objects.filter(
+                        enrollment_id=enr_id, special_criterion_id=actual_id
+                    ).values('enrollment_id', 'special_criterion_id', 'score').first()
+                    if existing:
+                        snapshot_before.append({
+                            'enrollment_id': existing['enrollment_id'],
+                            'criterion_id': f"special-{existing['special_criterion_id']}",
+                            'score': str(existing['score']),
+                        })
+                else:
+                    existing = models.CriterionScore.objects.filter(
+                        enrollment_id=enr_id, sub_criterion_id=crit_raw
+                    ).values('enrollment_id', 'sub_criterion_id', 'score').first()
+                    if existing:
+                        snapshot_before.append({
+                            'enrollment_id': existing['enrollment_id'],
+                            'criterion_id': existing['sub_criterion_id'],
+                            'score': str(existing['score']),
+                        })
+            except Exception:
+                pass
+
         saved = 0
         for u in updates:
             try:
                 criteria_id_raw = u.get('criterion_id')
                 enrollment_id = u.get('enrollment_id')
                 score_val = u.get('score')
-                
-                # Check if it is a special criterion
+
                 if str(criteria_id_raw).startswith('special-'):
                     actual_id = int(str(criteria_id_raw).replace('special-', ''))
-                    # Verify if special criterion exists first to avoid IntegrityError
                     if not models.CourseSpecialCriterion.objects.filter(id=actual_id).exists():
-                         print(f"Skipping special criterion {actual_id} - Not Found")
-                         continue
-
+                        print(f"Skipping special criterion {actual_id} - Not Found")
+                        continue
                     models.SpecialCriterionScore.objects.update_or_create(
                         enrollment_id=enrollment_id,
                         special_criterion_id=actual_id,
                         defaults={'score': score_val}
                     )
                 else:
-                    # Regular sub-criterion
                     models.CriterionScore.objects.update_or_create(
                         enrollment_id=enrollment_id,
                         sub_criterion_id=criteria_id_raw,
@@ -1263,19 +1292,16 @@ class CriterionScoreViewSet(viewsets.ModelViewSet):
                 saved += 1
             except Exception as e:
                 print(f"Error in bulk_save loop item {u}: {e}")
-                # Continue saving others? Or return error?
-                # Reporting error for this item makes debugging easier
                 return Response({"error": f"Error saving item: {e}"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Recalculate final grades for affect enrollments
+
         affected_enrollment_ids = set(u.get('enrollment_id') for u in updates)
         for enr_id in affected_enrollment_ids:
             try:
                 update_final_grade(enr_id)
             except Exception as e:
                 print(f"Error calling update_final_grade for {enr_id}: {e}")
-                # We don't want to fail the save if recalc fails, but we should log it.
 
+        save_bulk_audit(request, 'criterion-scores', request.path, list(updates), snapshot_before)
         return Response({"saved": saved})
 
 def update_final_grade(enrollment_id):
@@ -1336,7 +1362,7 @@ def update_final_grade(enrollment_id):
     except Exception as e:
         print(f"Error updating final grade for {enrollment_id}: {e}")
 
-class CourseTaskViewSet(viewsets.ModelViewSet):
+class CourseTaskViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.CourseTask.objects.all()
     serializer_class = serializers.CourseTaskSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1371,7 +1397,7 @@ class CourseTaskViewSet(viewsets.ModelViewSet):
         else:
             instance.delete()
 
-class TaskScoreViewSet(viewsets.ModelViewSet):
+class TaskScoreViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.TaskScore.objects.all()
     serializer_class = serializers.TaskScoreSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1388,12 +1414,26 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_save(self, request):
+        from api.audit.mixins import save_bulk_audit
         try:
             scores = request.data.get('updates', request.data.get('scores', []))
             saved_scores = []
-            
             affected_enrollments = set()
             affected_subcriteria = set()
+
+            # Capture snapshot_before for each affected task score
+            snapshot_before = []
+            for score_data in scores:
+                enr_id = score_data.get('enrollment_id')
+                task_id = score_data.get('task_id')
+                existing = models.TaskScore.objects.filter(
+                    enrollment_id=enr_id, task_id=task_id
+                ).values('enrollment_id', 'task_id', 'score').first()
+                snapshot_before.append({
+                    'enrollment_id': enr_id,
+                    'task_id': task_id,
+                    'score': str(existing['score']) if existing else None,
+                })
 
             for score_data in scores:
                 enrollment_id = score_data.get('enrollment_id')
@@ -1401,7 +1441,6 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
                 score_value = score_data.get('score')
 
                 if score_value is None:
-                    # Borrar la nota existente (dejar en blanco)
                     deleted, _ = models.TaskScore.objects.filter(
                         enrollment_id=enrollment_id,
                         task_id=task_id
@@ -1415,7 +1454,7 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
                         defaults={'score': score_value}
                     )
                     saved_scores.append(score_obj)
-                
+
                 affected_enrollments.add(enrollment_id)
                 try:
                     task = models.CourseTask.objects.get(id=task_id)
@@ -1430,23 +1469,21 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
                 for crit_type, crit_id in affected_subcriteria:
                     if crit_type == 'sub':
                         tasks = models.CourseTask.objects.filter(sub_criterion_id=crit_id)
-                        scores = models.TaskScore.objects.filter(enrollment_id=enroll_id, task__sub_criterion_id=crit_id)
-                        
+                        enroll_scores = models.TaskScore.objects.filter(enrollment_id=enroll_id, task__sub_criterion_id=crit_id)
+
                         total_weight = 0
                         weighted_sum = 0
-                        score_map = {s.task_id: s.score for s in scores}
-                        
+                        score_map = {s.task_id: s.score for s in enroll_scores}
+
                         for task in tasks:
                             s_val = score_map.get(task.id, 0)
                             weighted_sum += s_val * task.weight
                             total_weight += task.weight
-                        
+
                         if total_weight > 0:
                             raw_avg = weighted_sum / total_weight
                             sub_crit = models.CourseSubCriterion.objects.get(id=crit_id)
                             final_score = float(raw_avg) * float(sub_crit.percentage)
-                            
-                            # Update CriterionScore
                             models.CriterionScore.objects.update_or_create(
                                 enrollment_id=enroll_id,
                                 sub_criterion_id=crit_id,
@@ -1455,12 +1492,12 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
                     elif crit_type == 'special':
                         pass
 
-                # Update Final Grade
                 try:
                     update_final_grade(enroll_id)
                 except Exception as e:
                     print(f"Error updating final grade for {enroll_id}: {e}")
 
+            save_bulk_audit(request, 'task-scores', request.path, list(scores), snapshot_before)
             return Response({'status': 'success', 'saved': len(saved_scores)})
         except Exception as e:
             import traceback
@@ -1509,7 +1546,7 @@ class TaskScoreViewSet(viewsets.ModelViewSet):
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class ProjectViewSet(viewsets.ModelViewSet):
+class ProjectViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]

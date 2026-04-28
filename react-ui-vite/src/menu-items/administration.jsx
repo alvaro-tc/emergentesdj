@@ -1,4 +1,4 @@
-import { IconHistory, IconCertificate, IconBook, IconLayoutGrid, IconBriefcase, IconUserCheck, IconList } from '@tabler/icons-react';
+import { IconHistory, IconCertificate, IconBook, IconLayoutGrid, IconBriefcase, IconUserCheck, IconList, IconShieldCheck } from '@tabler/icons-react';
 
 const icons = {
     IconHistory,
@@ -7,7 +7,8 @@ const icons = {
     IconLayoutGrid,
     IconBriefcase,
     IconUserCheck,
-    IconList
+    IconList,
+    IconShieldCheck
 };
 
 export const administration = {
@@ -69,6 +70,14 @@ export const administration = {
             type: 'item',
             url: '/school/criteria',
             icon: icons.IconList,
+            breadcrumbs: false
+        },
+        {
+            id: 'audit-log',
+            title: 'Auditoría',
+            type: 'item',
+            url: '/admin/audit-log',
+            icon: icons.IconShieldCheck,
             breadcrumbs: false
         }
     ]
