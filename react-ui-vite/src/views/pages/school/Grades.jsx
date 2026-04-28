@@ -975,7 +975,7 @@ const Grades = () => {
                         onPageChange={handlePageChange}
                         rowsPerPage={pageSize}
                         onRowsPerPageChange={handlePageSizeChange}
-                        rowsPerPageOptions={[15, 30, 50, 100]}
+                        rowsPerPageOptions={[15, 30, 50, 100, 200]}
                         labelRowsPerPage="Estudiantes por página:"
                         labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
                     />
