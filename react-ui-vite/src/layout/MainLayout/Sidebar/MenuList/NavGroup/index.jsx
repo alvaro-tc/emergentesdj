@@ -66,4 +66,4 @@ NavGroup.propTypes = {
     item: PropTypes.object
 };
 
-export default NavGroup;
+export default React.memo(NavGroup);

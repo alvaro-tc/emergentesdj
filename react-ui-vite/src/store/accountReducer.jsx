@@ -1,5 +1,5 @@
 // action - state management
-import { ACCOUNT_INITIALIZE, LOGIN, LOGOUT } from './actions';
+import { ACCOUNT_INITIALIZE, LOGIN, LOGOUT, SET_ACTIVE_COURSE } from './actions';
 
 export const initialState = {
     token: '',
@@ -40,7 +40,7 @@ const accountReducer = (state = initialState, action) => {
                 activeCourse: null
             };
         }
-        case 'SET_ACTIVE_COURSE': {
+        case SET_ACTIVE_COURSE: {
             return {
                 ...state,
                 activeCourse: action.payload

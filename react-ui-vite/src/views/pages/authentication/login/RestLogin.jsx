@@ -35,7 +35,7 @@ import axios from 'axios';
 // project imports
 import useScriptRef from '../../../../hooks/useScriptRef';
 import AnimateButton from '../../../../ui-component/extended/AnimateButton';
-import { ACCOUNT_INITIALIZE } from './../../../../store/actions';
+import { accountInitialize } from './../../../../store/actions';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';
@@ -90,10 +90,7 @@ const RestLogin = ({ login, ...others }) => {
             );
 
             if (response.data.success) {
-                dispatcher({
-                    type: ACCOUNT_INITIALIZE,
-                    payload: { isLoggedIn: true, user: response.data.user, token: tempToken }
-                });
+                dispatcher(accountInitialize({ isLoggedIn: true, user: response.data.user, token: tempToken }));
                 setForceUpdateOpen(false);
             } else {
                 setUpdateError(response.data.msg || 'Error al actualizar');
@@ -139,10 +136,7 @@ const RestLogin = ({ login, ...others }) => {
                                         setForceUpdateOpen(true);
                                         setSubmitting(false);
                                     } else {
-                                        dispatcher({
-                                            type: ACCOUNT_INITIALIZE,
-                                            payload: { isLoggedIn: true, user: response.data.user, token: response.data.token }
-                                        });
+                                        dispatcher(accountInitialize({ isLoggedIn: true, user: response.data.user, token: response.data.token }));
                                         if (scriptedRef.current) {
                                             setStatus({ success: true });
                                             setSubmitting(false);

@@ -34,21 +34,16 @@ const StudentCourseRegistration = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
     useEffect(() => {
-        fetchOpenCourses();
-    }, []);
-
-    const fetchOpenCourses = async () => {
+        const controller = new AbortController();
         setLoading(true);
-        try {
-            const response = await axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`);
-            setOpenCourses(response.data);
-        } catch (error) {
-            console.error(error);
-            setSnackbar({ open: true, message: 'Error cargando cursos disponibles', severity: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    };
+        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal })
+            .then(res => setOpenCourses(res.data))
+            .catch(err => {
+                if (!axios.isCancel(err)) setSnackbar({ open: true, message: 'Error cargando cursos disponibles', severity: 'error' });
+            })
+            .finally(() => setLoading(false));
+        return () => controller.abort();
+    }, []);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });

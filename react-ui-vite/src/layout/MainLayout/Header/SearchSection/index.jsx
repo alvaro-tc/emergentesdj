@@ -13,7 +13,7 @@ import Transitions from '../../../../ui-component/extended/Transitions';
 import { IconAdjustmentsHorizontal, IconSearch, IconX } from '@tabler/icons-react';
 import axios from 'axios';
 import configData from '../../../../config';
-import { SET_ACTIVE_COURSE } from '../../../../store/actions';
+import { setActiveCourse } from '../../../../store/actions';
 
 // Shared avatar sx styles
 const avatarSx = (theme) => ({
@@ -66,7 +66,7 @@ const SearchSection = () => {
                             selected = response.data.find(c => !c.subject_details?.archived) || response.data[0];
                         }
                         if (selected) {
-                            dispatch({ type: SET_ACTIVE_COURSE, payload: selected });
+                            dispatch(setActiveCourse(selected));
                         }
                     }
                 })
@@ -128,7 +128,7 @@ const SearchSection = () => {
     const handleSelect = (course) => {
         setOpen(false);
         setValue('');
-        dispatch({ type: SET_ACTIVE_COURSE, payload: course });
+        dispatch(setActiveCourse(course));
         if (account.token) {
             axios.patch(configData.API_SERVER + 'manage-users/profile/', { active_course: course.id })
                 .catch(error => console.error('Error saving active course preference', error));

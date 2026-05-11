@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, permissions, status, parsers
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -8,6 +10,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from api.audit.mixins import AuditMixin
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -115,22 +119,10 @@ class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
         """
         # Save with active=True explicitly to ensure course appears in list
         instance = serializer.save(active=True)
-        print(f"✅ Created course: {instance.id}, active={instance.active}, subject_archived={instance.subject.archived if instance.subject else 'N/A'}")
         return instance
 
     def perform_update(self, serializer):
-        print("=" * 80)
-        print("CourseViewSet.perform_update called")
-        print(f"Request data keys: {list(self.request.data.keys())}")
-        print(f"Request FILES: {self.request.FILES}")
         instance = serializer.save()
-        if instance.image:
-            print(f"Image field value: {instance.image}")
-            print(f"Image path: {instance.image.path}")
-            print(f"Image url: {instance.image.url}")
-        else:
-            print("No image in instance after save")
-        print("=" * 80)
         return instance
 
 
@@ -735,9 +727,69 @@ class ReportViewSet(viewsets.ViewSet):
             # My Courses List (All enrolled courses with images)
             data['enrolled_courses'] = []
             
-            active_enrollments = my_enrollments.select_related('course', 'course__subject', 'course__teacher', 'course__period')
-            
-            print(f"Dashboard Stats: Found {active_enrollments.count()} active enrollments for user {user.email}")
+            active_enrollments = list(my_enrollments.select_related(
+                'course', 'course__subject', 'course__teacher', 'course__period'
+            ))
+            if active_enrollments:
+                _enr_ids = [e.id for e in active_enrollments]
+                _course_ids = list({e.course_id for e in active_enrollments})
+                _all_sc = list(
+                    models.CourseSubCriterion.objects.filter(
+                        course_id__in=_course_ids, visible_to_students=True
+                    ).select_related('parent_criterion').annotate(
+                        has_tasks=Exists(models.CourseTask.objects.filter(sub_criterion=OuterRef('pk'))),
+                        has_projects=Exists(models.Project.objects.filter(sub_criterion=OuterRef('pk')))
+                    ).order_by('parent_criterion__id', 'id')
+                )
+                _sc_by_course: dict = {}
+                for _s in _all_sc:
+                    _sc_by_course.setdefault(_s.course_id, []).append(_s)
+                _sc_ids = [_s.id for _s in _all_sc]
+                _tasks_by_sub: dict = {}
+                for _t in models.CourseTask.objects.filter(sub_criterion_id__in=_sc_ids):
+                    _tasks_by_sub.setdefault(_t.sub_criterion_id, []).append(_t)
+                _task_scores: dict = {}
+                for _ts in models.TaskScore.objects.filter(
+                    enrollment_id__in=_enr_ids, task__sub_criterion_id__in=_sc_ids
+                ):
+                    _task_scores[(_ts.enrollment_id, _ts.task_id)] = _ts.score
+                _crit_scores: dict = {}
+                for _cs in models.CriterionScore.objects.filter(
+                    enrollment_id__in=_enr_ids, sub_criterion_id__in=_sc_ids
+                ):
+                    _crit_scores[(_cs.enrollment_id, _cs.sub_criterion_id)] = _cs
+                _enr_id_set = set(_enr_ids)
+                _proj_map: dict = {}
+                for _proj in models.Project.objects.filter(
+                    sub_criterion_id__in=_sc_ids, members__id__in=_enr_ids
+                ).prefetch_related('members'):
+                    for _m in _proj.members.all():
+                        if _m.id in _enr_id_set:
+                            _proj_map[(_m.id, _proj.sub_criterion_id)] = _proj
+                _all_spec = list(
+                    models.CourseSpecialCriterion.objects.filter(
+                        course_id__in=_course_ids, visible_to_students=True
+                    ).select_related('parent_criterion').annotate(
+                        has_tasks=Exists(models.CourseTask.objects.filter(special_criterion=OuterRef('pk')))
+                    ).order_by('id')
+                )
+                _spec_by_course: dict = {}
+                for _sp in _all_spec:
+                    _spec_by_course.setdefault(_sp.course_id, []).append(_sp)
+                _spec_ids = [_sp.id for _sp in _all_spec]
+                _spec_tasks: dict = {}
+                for _t in models.CourseTask.objects.filter(special_criterion_id__in=_spec_ids):
+                    _spec_tasks.setdefault(_t.special_criterion_id, []).append(_t)
+                _spec_task_scores: dict = {}
+                for _ts in models.TaskScore.objects.filter(
+                    enrollment_id__in=_enr_ids, task__special_criterion_id__in=_spec_ids
+                ):
+                    _spec_task_scores[(_ts.enrollment_id, _ts.task_id)] = _ts.score
+                _spec_scores: dict = {}
+                for _scs in models.SpecialCriterionScore.objects.filter(
+                    enrollment_id__in=_enr_ids, special_criterion_id__in=_spec_ids
+                ):
+                    _spec_scores[(_scs.enrollment_id, _scs.special_criterion_id)] = _scs
 
             for enrollment in active_enrollments:
                 try:
@@ -747,19 +799,9 @@ class ReportViewSet(viewsets.ViewSet):
                         image_url = request.build_absolute_uri(course.image.url)
                     
 
-                    # Calculate Criteria Grades (Hierarchical) - Aligned with Gradesheet
                     criteria_grades = []
-                    
-                    # Fetch all sub-criteria for the course visible to students, grouped by parent
-                    sub_criteria = models.CourseSubCriterion.objects.filter(course=course, visible_to_students=True).select_related('parent_criterion').annotate(
-                        has_tasks=Exists(models.CourseTask.objects.filter(sub_criterion=OuterRef('pk'))),
-                        has_projects=Exists(models.Project.objects.filter(sub_criterion=OuterRef('pk')))
-                    ).order_by('parent_criterion__id', 'id')
-
-                    # Group by Parent Criterion
+                    sub_criteria = _sc_by_course.get(course.id, [])
                     grouped_criteria = {}
-                    
-                    # 1. Process Standard Sub-Criteria
                     for sub in sub_criteria:
                         parent = sub.parent_criterion
                         if not parent:
@@ -778,42 +820,21 @@ class ReportViewSet(viewsets.ViewSet):
                         
                         sub_tasks_list = []
                         if sub.has_tasks and sub.tasks_visible_to_students:
-                             tasks = models.CourseTask.objects.filter(sub_criterion=sub)
-                             task_scores = models.TaskScore.objects.filter(
-                                 enrollment=enrollment,
-                                 task__sub_criterion=sub
-                             )
-                             score_map_tasks = {ts.task_id: ts.score for ts in task_scores}
-                             for task in tasks:
-                                 score_val = score_map_tasks.get(task.id, 0)
-                                 sub_tasks_list.append({
-                                     'name': task.name,
-                                     'weight': float(task.weight),
-                                     'score': float(score_val)
-                                 })
+                            for task in _tasks_by_sub.get(sub.id, []):
+                                score_val = _task_scores.get((enrollment.id, task.id), 0)
+                                sub_tasks_list.append({
+                                    'name': task.name,
+                                    'weight': float(task.weight),
+                                    'score': float(score_val)
+                                })
                         
-                        # Get Score
                         sub_score = 0
-                        
-                        # Check if it's a Project Sub-Criterion
                         if sub.is_project:
-                            # Find project where student is a member
-                            project = models.Project.objects.filter(
-                                sub_criterion=sub,
-                                members=enrollment
-                            ).first()
-                            
-                            if project:
-                                sub_score = project.score
-                            else:
-                                sub_score = 0
+                            _proj = _proj_map.get((enrollment.id, sub.id))
+                            sub_score = _proj.score if _proj else 0
                         else:
-                            # Standard CriterionScore
-                            score_obj = models.CriterionScore.objects.filter(
-                                enrollment=enrollment,
-                                sub_criterion=sub
-                            ).first()
-                            sub_score = score_obj.score if score_obj else 0
+                            _cs_obj = _crit_scores.get((enrollment.id, sub.id))
+                            sub_score = _cs_obj.score if _cs_obj else 0
                         
                         sub_max = sub.percentage
 
@@ -827,70 +848,45 @@ class ReportViewSet(viewsets.ViewSet):
                         grouped_criteria[parent.id]['sum_max_points'] += sub_max
                         grouped_criteria[parent.id]['raw_score'] += sub_score
 
-                    # 2. Process Special Criteria (Extra Points) - Grouped under Parent, only visible to students
-                    special_criteria = models.CourseSpecialCriterion.objects.filter(course=course, visible_to_students=True).select_related('parent_criterion').annotate(
-                        has_tasks=Exists(models.CourseTask.objects.filter(special_criterion=OuterRef('pk')))
-                    ).order_by('id')
+                    special_criteria = _spec_by_course.get(course.id, [])
 
                     for spec in special_criteria:
                         final_score = 0
                         sub_tasks_list = []
                         
-                        # Logic from gradesheet: Calculate from tasks if has_tasks
                         if spec.has_tasks:
-                             tasks = models.CourseTask.objects.filter(special_criterion=spec)
-                             task_scores = models.TaskScore.objects.filter(
-                                 enrollment=enrollment,
-                                 task__special_criterion=spec
-                             )
-                             score_map_tasks = {ts.task_id: ts.score for ts in task_scores}
-
-                             total_weight = 0
-                             weighted_sum = 0
-
-                             for task in tasks:
-                                 score_val = score_map_tasks.get(task.id, 0)
-                                 if spec.tasks_visible_to_students:
-                                     sub_tasks_list.append({
-                                         'name': task.name,
-                                         'weight': float(task.weight),
-                                         'score': float(score_val)
-                                     })
-                                 weighted_sum += score_val * task.weight
-                                 total_weight += task.weight
-                             
-                             if total_weight > 0:
-                                 # raw_avg is Decimal
-                                 raw_avg = Decimal(weighted_sum) / Decimal(total_weight)
-                                 # Ensure spec.percentage is Decimal
-                                 final_score = raw_avg * spec.percentage
-                             else:
-                                 final_score = Decimal('0.00')
+                            total_weight = 0
+                            weighted_sum = 0
+                            for task in _spec_tasks.get(spec.id, []):
+                                score_val = _spec_task_scores.get((enrollment.id, task.id), 0)
+                                if spec.tasks_visible_to_students:
+                                    sub_tasks_list.append({
+                                        'name': task.name,
+                                        'weight': float(task.weight),
+                                        'score': float(score_val)
+                                    })
+                                weighted_sum += score_val * task.weight
+                                total_weight += task.weight
+                            if total_weight > 0:
+                                raw_avg = Decimal(weighted_sum) / Decimal(total_weight)
+                                final_score = raw_avg * spec.percentage
+                            else:
+                                final_score = Decimal('0.00')
                         else:
-                            # Direct Score from SpecialCriterionScore
-                            score_obj = models.SpecialCriterionScore.objects.filter(
-                                enrollment=enrollment,
-                                special_criterion=spec
-                            ).first()
-                            final_score = score_obj.score if score_obj else Decimal('0.00')
+                            _scs_obj = _spec_scores.get((enrollment.id, spec.id))
+                            final_score = _scs_obj.score if _scs_obj else Decimal('0.00')
                         
-                        # Add to Parent Group if exists
                         parent = spec.parent_criterion
                         if parent and parent.id in grouped_criteria:
-                             grouped_criteria[parent.id]['sub_criteria'].append({
+                            grouped_criteria[parent.id]['sub_criteria'].append({
                                 'name': f"{spec.name} (Extra)",
                                 'max_points': spec.percentage,
                                 'score': final_score,
                                 'is_special': True,
                                 'tasks': sub_tasks_list
                             })
-                             # Ensure raw_score is treated as Decimal (it starts as int 0? no, dependent on previous adds)
-                             # Let's verify initialization
-                             grouped_criteria[parent.id]['raw_score'] += final_score
-                             # We rarely add special points to sum_max_points as they are "extra", but strictly speaking user didn't specify. 
-                             # Usually extra points don't increase the denominator, only the numerator.
+                            grouped_criteria[parent.id]['raw_score'] += final_score
                         else:
-                            # Fallback for orphaned special criteria (shouldn't happen with correct data)
                             criteria_grades.append({
                                 'name': spec.name,
                                 'max_points': spec.percentage,
@@ -900,16 +896,8 @@ class ReportViewSet(viewsets.ViewSet):
                                 'tasks': sub_tasks_list
                             })
 
-                    # 3. Finalize Groups and Apply Caps
                     for pid, group in grouped_criteria.items():
-                        # Capping logic: Min(Raw Sum, Criterion Weight)
-                        # Ensure we convert to float for comparison
-                        limit = float(group['max_points'])
-                        raw = float(group['raw_score'])
-                        
-                        final_group_score = min(raw, limit)
-                        group['score'] = final_group_score
-                        
+                        group['score'] = min(float(group['raw_score']), float(group['max_points']))
                         criteria_grades.append(group)
 
                     data['enrolled_courses'].append({
@@ -926,7 +914,7 @@ class ReportViewSet(viewsets.ViewSet):
                         'criteria_grades': criteria_grades
                     })
                 except Exception as e:
-                    print(f"Error processing enrollment {enrollment.id}: {e}")
+                    logger.error("Error processing enrollment %s: %s", enrollment.id, e)
 
             data['popular_data'] = [
                 {

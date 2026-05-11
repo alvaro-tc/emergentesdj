@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { selectAccount, selectActiveCourse } from '../../../store/selectors';
 
 // material-ui
 import { Grid } from '@mui/material';
@@ -54,8 +55,8 @@ const truncate = (str, max = 18) =>
 const Dashboard = () => {
     const [isLoading, setLoading] = useState(true);
     const [stats, setStats] = useState({});
-    const account = useSelector((state) => state.account);
-    const activeCourse = useSelector((state) => state.account.activeCourse);
+    const account = useSelector(selectAccount);
+    const activeCourse = useSelector(selectActiveCourse);
 
     // Paralelo-specific stats (only for ADMIN when a course is selected)
     const [parallelLoading, setParallelLoading] = useState(false);
@@ -64,21 +65,24 @@ const Dashboard = () => {
     // ── Global dashboard stats ───────────────────────────────────────────────
     useEffect(() => {
         if (!account.isInitialized) return;
+        const controller = new AbortController();
 
         const fetchStats = async () => {
             try {
                 const response = await axios.get(`${configData.API_SERVER}reports/dashboard_stats/`, {
-                    headers: { Authorization: `Bearer ${account.token}` }
+                    headers: { Authorization: `Bearer ${account.token}` },
+                    signal: controller.signal,
                 });
                 setStats(response.data);
             } catch (err) {
-                console.error('Error fetching dashboard stats:', err);
+                if (!axios.isCancel(err)) console.error('Error fetching dashboard stats:', err);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchStats();
+        return () => controller.abort();
     }, [account.isInitialized, account.token]);
 
     // ── Paralelo stats (enrollments + gradesheet) ───────────────────────────
@@ -89,15 +93,16 @@ const Dashboard = () => {
         }
 
         setParallelLoading(true);
+        const controller = new AbortController();
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
 
         const fetchParallelStats = async () => {
             try {
-                axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-
                 const [enrollRes, gradeRes] = await Promise.all([
-                    axios.get(`${configData.API_SERVER}enrollments/?course=${activeCourse.id}`),
+                    axios.get(`${configData.API_SERVER}enrollments/?course=${activeCourse.id}`, { signal: controller.signal }),
                     axios.get(
-                        `${configData.API_SERVER}criterion-scores/gradesheet/?course_id=${activeCourse.id}&page=1&page_size=200`
+                        `${configData.API_SERVER}criterion-scores/gradesheet/?course_id=${activeCourse.id}&page=1&page_size=200`,
+                        { signal: controller.signal }
                     ),
                 ]);
 
@@ -177,14 +182,17 @@ const Dashboard = () => {
                     criterionCount: structure.length,
                 });
             } catch (err) {
-                console.error('Error fetching parallel stats:', err);
-                setParallelStats(null);
+                if (!axios.isCancel(err)) {
+                    console.error('Error fetching parallel stats:', err);
+                    setParallelStats(null);
+                }
             } finally {
                 setParallelLoading(false);
             }
         };
 
         fetchParallelStats();
+        return () => controller.abort();
     }, [activeCourse?.id, account.token]);
 
     // ── Role-based rendering ─────────────────────────────────────────────────

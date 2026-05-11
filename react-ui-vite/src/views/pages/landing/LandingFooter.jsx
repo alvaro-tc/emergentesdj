@@ -35,13 +35,11 @@ const LandingFooter = ({ isDark }) => {
     };
 
     useEffect(() => {
-        const fetchSocialLinks = async () => {
-            try {
-                const res = await axios.get(`${configData.API_SERVER}web-config/`);
-                if (res.data) setSocialLinks(res.data);
-            } catch {}
-        };
-        fetchSocialLinks();
+        const controller = new AbortController();
+        axios.get(`${configData.API_SERVER}web-config/`, { signal: controller.signal })
+            .then(res => { if (res.data) setSocialLinks(res.data); })
+            .catch(err => { if (!axios.isCancel(err)) console.error(err); });
+        return () => controller.abort();
     }, []);
 
     const hasSocial = socialLinks.facebook || socialLinks.youtube || socialLinks.tiktok || socialLinks.instagram;

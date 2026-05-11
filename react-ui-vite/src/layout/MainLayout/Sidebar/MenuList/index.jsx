@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { selectAccount, selectActiveCourse, selectUserRole } from '../../../../store/selectors';
 import { Typography } from '@mui/material';
 import axios from 'axios';
 
@@ -12,8 +13,8 @@ import { IconUsers, IconUsersGroup } from '@tabler/icons-react';
 
 // Dynamic academic section for students — checks open projects per active course
 const StudentAcademicMenu = () => {
-    const account = useSelector((s) => s.account);
-    const activeCourse = useSelector((s) => s.account.activeCourse);
+    const account = useSelector(selectAccount);
+    const activeCourse = useSelector(selectActiveCourse);
     const [canRegister, setCanRegister] = useState(false);
 
     useEffect(() => {
@@ -77,8 +78,8 @@ const StudentAcademicMenu = () => {
 //-----------------------|| SIDEBAR MENU LIST ||-----------------------//
 
 const MenuList = () => {
-    const account = useSelector((state) => state.account);
-    const userRole = account.user ? account.user.role : null;
+    const account = useSelector(selectAccount);
+    const userRole = useSelector(selectUserRole);
 
     if (userRole === 'STUDENT') {
         const dashboardItem = menuItem.items.find((item) => item.id === 'dashboard');
@@ -112,4 +113,4 @@ const MenuList = () => {
     });
 };
 
-export default MenuList;
+export default React.memo(MenuList);

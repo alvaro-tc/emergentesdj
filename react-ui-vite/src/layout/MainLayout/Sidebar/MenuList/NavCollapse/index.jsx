@@ -124,4 +124,4 @@ NavCollapse.propTypes = {
     level: PropTypes.number
 };
 
-export default NavCollapse;
+export default React.memo(NavCollapse);

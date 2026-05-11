@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { store } from '../store';
-import { LOGOUT } from '../store/actions';
+import { logout } from '../store/actions';
 import auditBridge from './auditBridge';
 
 let isHandling401 = false;
@@ -91,7 +91,7 @@ export const setupAxiosInterceptors = () => {
 
             if (isTokenError) {
                 isHandling401 = true;
-                store.dispatch({ type: LOGOUT });
+                store.dispatch(logout());
                 window.location.href = '/login';
                 setTimeout(() => { isHandling401 = false; }, 3000);
             }

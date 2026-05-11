@@ -47,18 +47,12 @@ const PublicCourses = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
     useEffect(() => {
-        const fetchCourses = async () => {
-            try {
-                const response = await axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`);
-                setCourses(response.data);
-            } catch (error) {
-                console.error("Failed to fetch courses", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCourses();
+        const controller = new AbortController();
+        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal })
+            .then(res => setCourses(res.data))
+            .catch(err => { if (!axios.isCancel(err)) console.error('Failed to fetch courses', err); })
+            .finally(() => setLoading(false));
+        return () => controller.abort();
     }, []);
 
     const handleRegisterClick = (course) => {

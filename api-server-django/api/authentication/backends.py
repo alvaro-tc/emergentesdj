@@ -38,12 +38,12 @@ class ActiveSessionAuthentication(authentication.BaseAuthentication):
 
         try:
             jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        except:
+        except jwt.PyJWTError:
             raise exceptions.AuthenticationFailed(self.auth_error_message)
 
         try:
             active_session = ActiveSession.objects.get(token=token)
-        except:
+        except ActiveSession.DoesNotExist:
             raise exceptions.AuthenticationFailed(self.auth_error_message)
 
         try:

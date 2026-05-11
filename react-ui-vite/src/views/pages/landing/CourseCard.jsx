@@ -176,4 +176,4 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
     );
 };
 
-export default CourseCard;
+export default React.memo(CourseCard);

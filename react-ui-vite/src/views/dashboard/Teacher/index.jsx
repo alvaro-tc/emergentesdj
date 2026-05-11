@@ -9,7 +9,7 @@ import { IconPencil, IconSettings, IconUserPlus, IconListCheck, IconBulb, IconSc
 import CourseDialog from '../../pages/school/CourseDialog';
 import * as ScheduleUtils from '../../../utils/scheduleUtils';
 import { useNavigate } from 'react-router-dom';
-import { SET_ACTIVE_COURSE } from '../../../store/actions';
+import { setActiveCourse } from '../../../store/actions';
 
 
 const TeacherDashboard = () => {
@@ -64,7 +64,7 @@ const TeacherDashboard = () => {
 
         // Dispatch action to set active course (if needed by your app logic)
         // Check if SET_ACTIVE_COURSE expects just ID or object. usually object.
-        dispatch({ type: SET_ACTIVE_COURSE, payload: course });
+        dispatch(setActiveCourse(course));
         navigate(path);
     };
 

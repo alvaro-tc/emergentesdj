@@ -15,7 +15,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import navigation from './../../menu-items';
 import { drawerWidth } from '../../store/constant';
-import { SET_MENU } from './../../store/actions';
+import { setMenu } from './../../store/actions';
 
 // assets
 import { IconChevronRight } from '@tabler/icons-react';
@@ -30,11 +30,11 @@ const MainLayout = ({ children }) => {
     const leftDrawerOpened = useSelector((state) => state.customization.opened);
     const dispatch = useDispatch();
     const handleLeftDrawerToggle = () => {
-        dispatch({ type: SET_MENU, opened: !leftDrawerOpened });
+        dispatch(setMenu(!leftDrawerOpened));
     };
 
     React.useEffect(() => {
-        dispatch({ type: SET_MENU, opened: !matchDownMd });
+        dispatch(setMenu(!matchDownMd));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [matchDownMd]);
 

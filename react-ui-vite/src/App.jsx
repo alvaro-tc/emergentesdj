@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { selectCustomization } from './store/selectors';
 
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, StyledEngineProvider } from '@mui/material';
@@ -18,7 +19,7 @@ import ErrorBoundary from './ui-component/ErrorBoundary';
 //-----------------------|| APP ||-----------------------//
 
 const App = () => {
-    const customization = useSelector((state) => state.customization);
+    const customization = useSelector(selectCustomization);
 
     // Set up axios interceptor to handle 401 (token expired) globally
     useEffect(() => {

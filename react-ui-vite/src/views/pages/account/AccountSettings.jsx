@@ -18,7 +18,7 @@ import configData from '../../../config';
 import { useSelector, useDispatch } from 'react-redux';
 import MainCard from '../../../ui-component/cards/MainCard';
 import { gridSpacing } from '../../../store/constant';
-import { ACCOUNT_INITIALIZE } from '../../../store/actions';
+import { accountInitialize } from '../../../store/actions';
 
 const AccountSettings = () => {
     const account = useSelector((state) => state.account);
@@ -68,10 +68,7 @@ const AccountSettings = () => {
             const response = await axios.patch(`${configData.API_SERVER}manage-users/profile/`, data);
 
             // Update Redux store with new user data
-            dispatcher({
-                type: ACCOUNT_INITIALIZE,
-                payload: { isLoggedIn: true, user: response.data.user, token: account.token }
-            });
+            dispatcher(accountInitialize({ isLoggedIn: true, user: response.data.user, token: account.token }));
 
             setProfile(response.data.user);
             setSnackbar({ open: true, message: 'Perfil actualizado exitosamente', severity: 'success' });

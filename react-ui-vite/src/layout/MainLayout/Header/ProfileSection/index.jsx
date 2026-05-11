@@ -24,7 +24,7 @@ import MainCard from '../../../../ui-component/cards/MainCard';
 import Transitions from '../../../../ui-component/extended/Transitions';
 
 import { IconLogout, IconSearch, IconSettings } from '@tabler/icons-react';
-import { LOGOUT } from '../../../../store/actions';
+import { logout } from '../../../../store/actions';
 
 const ProfileSection = () => {
     const theme = useTheme();
@@ -41,7 +41,7 @@ const ProfileSection = () => {
     const handleLogout = async () => {
         try {
             // await axios.post('/api/account/logout');
-            dispatcher({ type: LOGOUT });
+            dispatcher(logout());
         } catch (err) {
             console.error(err);
         }
