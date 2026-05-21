@@ -25,19 +25,40 @@ const DAYS_OF_WEEK = [
     'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
 ];
 
+const buildImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http') || imagePath.startsWith('blob:') || imagePath.startsWith('data:')) {
+        return imagePath;
+    }
+    const baseHost = configData.API_SERVER.replace(/\/api\/?$/, '');
+    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${baseHost}${path}`;
+};
+
 const CourseDialog = ({ open, handleClose, course, onSave }) => {
     const account = useSelector((state) => state.account);
     const [subjects, setSubjects] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [showArchivedSubjects, setShowArchivedSubjects] = useState(false);
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         if (open) {
             fetchSubjects();
             fetchTeachers();
+            const existing = course?.image_url || course?.image || null;
+            setImagePreview(buildImageUrl(existing));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
+    }, [open, course]);
+
+    useEffect(() => {
+        return () => {
+            if (imagePreview && imagePreview.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
 
     const fetchSubjects = async () => {
         try {
@@ -488,31 +509,34 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                                         </Grid>
 
                                         <Grid size={12}>
-                                            <input
-                                                accept="image/*"
-                                                style={{ display: 'none' }}
-                                                id="raised-button-file"
-                                                type="file"
-                                                onChange={(event) => {
-                                                    const file = event.currentTarget.files[0];
-                                                    if (file) {
-                                                        setFieldValue("image", file);
-                                                    }
-                                                }}
-                                            />
-                                            <label htmlFor="raised-button-file">
-                                                <Button variant="outlined" component="span" fullWidth>
-                                                    {values.image ? (values.image.name || 'Imagen Seleccionada (Click para cambiar)') : 'Subir Imagen del Curso'}
-                                                </Button>
-                                            </label>
-                                            {values.image && (
-                                                <div style={{ marginTop: 10, textAlign: 'center' }}>
+                                            <Button variant="outlined" component="label" fullWidth>
+                                                {values.image instanceof File
+                                                    ? values.image.name
+                                                    : (imagePreview ? 'Cambiar Imagen del Curso' : 'Subir Imagen del Curso')}
+                                                <input
+                                                    type="file"
+                                                    hidden
+                                                    accept="image/*"
+                                                    onChange={(event) => {
+                                                        const file = event.currentTarget.files?.[0];
+                                                        if (file) {
+                                                            setFieldValue('image', file);
+                                                            if (imagePreview && imagePreview.startsWith('blob:')) {
+                                                                URL.revokeObjectURL(imagePreview);
+                                                            }
+                                                            setImagePreview(URL.createObjectURL(file));
+                                                        }
+                                                    }}
+                                                />
+                                            </Button>
+                                            {imagePreview && (
+                                                <Box sx={{ mt: 1.5, textAlign: 'center' }}>
                                                     <img
-                                                        src={typeof values.image === 'string' ? values.image : URL.createObjectURL(values.image)}
+                                                        src={imagePreview}
                                                         alt="Preview"
                                                         style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8 }}
                                                     />
-                                                </div>
+                                                </Box>
                                             )}
                                         </Grid>
 

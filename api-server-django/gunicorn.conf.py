@@ -20,7 +20,7 @@ max_requests = 500
 max_requests_jitter = 50
 
 # Bind
-bind = "0.0.0.0:5005"
+bind = "127.0.0.1:8000"
 
 # Logging
 accesslog = "-"

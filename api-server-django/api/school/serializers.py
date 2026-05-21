@@ -68,10 +68,20 @@ class CourseSerializer(serializers.ModelSerializer):
     course_identifier = serializers.CharField(
         max_length=100, required=False, allow_blank=True, allow_null=True
     )
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Course
         fields = '__all__'
+        read_only_fields = ['image_url']
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
 
     def validate_course_identifier(self, value):
         # Convert empty string to None so unique constraint doesn't fail
