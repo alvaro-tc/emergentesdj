@@ -12,13 +12,13 @@ jobs:
       - name: Desplegar vía SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}     # IP de tu servidor
+          host: ${{ secrets.SERVER_HOST }} # IP de tu servidor
           username: ${{ secrets.SERVER_USER }} # Usuario (ej: root o ubuntu)
-          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Tu llave privada SSH
-          port: 20022
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # Tu llave privada SSH
+          port: 22
           script: |
             cd ~/www/emergentesdj
-            
+
             git pull origin master
             # --- Build Frontend React Vite ---
             export NODE_OPTIONS="--max-old-space-size=2048"
