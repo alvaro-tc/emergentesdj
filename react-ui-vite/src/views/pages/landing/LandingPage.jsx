@@ -336,15 +336,16 @@ const LandingPage = () => {
                     }} />
 
                     <Container maxWidth="lg" sx={{ pt: { xs: 6, md: 8 }, position: 'relative', zIndex: 1 }}>
-                        <Grid container spacing={{ xs: 4, md: 8 }} alignItems="center">
+                        <Grid container spacing={{ xs: 4, md: 8 }} alignItems="center" justifyContent="center">
 
-                            {/* ── Left ── */}
+                            {/* ── Center ── */}
                             <Grid
                                 size={{
                                     xs: 12,
-                                    md: 6
+                                    md: 8
                                 }}>
-                                <Box sx={{ ...fadeUp(0.05), display: 'inline-flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                                <Box sx={{ ...fadeUp(0.05), display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 3 }}>
                                     <Box sx={{
                                         width: 7, height: 7, borderRadius: '50%',
                                         background: C.purple,
@@ -397,13 +398,13 @@ const LandingPage = () => {
                                     fontSize: { xs: '1rem', md: '1.05rem' },
                                     color: C.textMuted,
                                     lineHeight: 1.8,
-                                    maxWidth: 460,
+                                    maxWidth: 600,
                                     mb: 4,
                                 }}>
                                     Gestiona cursos, proyectos y evaluaciones desde un único panel. Tecnología moderna para la administración académica de tu institución.
                                 </Typography>
 
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={fadeUp(0.35)}>
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ ...fadeUp(0.35), justifyContent: 'center' }}>
                                     <Box component={RouterLink} to="/login" sx={{
                                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1,
                                         textDecoration: 'none',
@@ -437,16 +438,7 @@ const LandingPage = () => {
                                         Ver Cursos
                                     </Box>
                                 </Stack>
-                            </Grid>
-
-                            {/* ── Right: Diagram Frame ── */}
-                            <Grid
-                                sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end', alignItems: 'center' }}
-                                size={{
-                                    xs: 12,
-                                    md: 6
-                                }}>
-                                <DiagramFrame src={heroImageSrc} isDark={isDark} />
+                                </Box>
                             </Grid>
                         </Grid>
 
