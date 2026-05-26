@@ -85,7 +85,7 @@ const LandingFooter = ({ isDark }) => {
                             mb: 2,
                         }} />
                         <Typography sx={{
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontSize: '0.85rem',
                             color: C.textMuted,
                             lineHeight: 1.7,
@@ -115,7 +115,7 @@ const LandingFooter = ({ isDark }) => {
                             {NAV_LINKS.map((link) => (
                                 <Box key={link.to} component={RouterLink} to={link.to} sx={{
                                     textDecoration: 'none',
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '0.875rem',
                                     color: C.textMuted,
                                     transition: 'color 0.2s',
@@ -150,7 +150,7 @@ const LandingFooter = ({ isDark }) => {
                             ].map((link) => (
                                 <Box key={link.to} component={RouterLink} to={link.to} sx={{
                                     textDecoration: 'none',
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '0.875rem',
                                     color: C.textMuted,
                                     transition: 'color 0.2s',

@@ -41,7 +41,7 @@ const AboutPage = () => {
 
     const SectionHeading = ({ children }) => (
         <Typography sx={{
-            fontFamily: "'DM Serif Display', serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: { xs: '2rem', md: '2.75rem' },
             fontWeight: 400,
             color: C.text,
@@ -58,7 +58,7 @@ const AboutPage = () => {
                 minHeight: '100vh',
                 background: C.bg,
                 backgroundImage: DOT,
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "'Inter', sans-serif",
                 transition: 'background 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden'
@@ -89,7 +89,7 @@ const AboutPage = () => {
                         </SectionHeading>
                         <Typography sx={{
                             mt: 2,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontSize: { xs: '1rem', md: '1.05rem' },
                             color: C.textMuted,
                             lineHeight: 1.8,
@@ -119,7 +119,7 @@ const AboutPage = () => {
 
                         <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 800, mx: 'auto' }}>
                             <Typography sx={{
-                                fontFamily: "'DM Serif Display', serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontSize: { xs: '1.75rem', md: '2.5rem' },
                                 mb: 3,
                                 lineHeight: 1.2
@@ -127,7 +127,7 @@ const AboutPage = () => {
                                 Nuestra Misión
                             </Typography>
                             <Typography sx={{
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontSize: { xs: '1.05rem', md: '1.2rem' },
                                 color: 'rgba(255,255,255,0.9)',
                                 lineHeight: 1.8,
@@ -187,7 +187,7 @@ const AboutPage = () => {
                                             </Box>
                                             
                                             <Typography sx={{
-                                                fontFamily: "'DM Serif Display', serif",
+                                                fontFamily: "'Inter', sans-serif",
                                                 fontSize: '1.4rem',
                                                 color: C.text,
                                                 mb: 2,
@@ -197,7 +197,7 @@ const AboutPage = () => {
                                             </Typography>
                                             
                                             <Typography sx={{
-                                                fontFamily: "'DM Sans', sans-serif",
+                                                fontFamily: "'Inter', sans-serif",
                                                 fontSize: '0.95rem',
                                                 color: C.textMuted,
                                                 lineHeight: 1.7,

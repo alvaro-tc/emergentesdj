@@ -287,7 +287,7 @@ const LandingPage = () => {
 
     const SectionHeading = ({ children }) => (
         <Typography sx={{
-            fontFamily: "'DM Serif Display', serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: { xs: '2rem', md: '2.75rem' },
             fontWeight: 400,
             color: C.text,
@@ -300,7 +300,7 @@ const LandingPage = () => {
     return (
         <>
             <style>{KEYFRAMES}</style>
-            <Box sx={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <Box sx={{ fontFamily: "'Inter', sans-serif" }}>
 
                 {/* ══════════════════ HERO ══════════════════════════════════════ */}
                 <Box sx={{
@@ -365,7 +365,7 @@ const LandingPage = () => {
 
                                 <Box sx={fadeUp(0.15)}>
                                     <Typography sx={{
-                                        fontFamily: "'DM Serif Display', 'Georgia', serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.8rem', lg: '4.2rem' },
                                         fontWeight: 400,
                                         lineHeight: 1.1,
@@ -376,7 +376,7 @@ const LandingPage = () => {
                                     </Typography>
                                     <Typography component="span" sx={{
                                         display: 'block',
-                                        fontFamily: "'DM Serif Display', 'Georgia', serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.8rem', lg: '4.2rem' },
                                         fontWeight: 400,
                                         lineHeight: 1.1,
@@ -394,7 +394,7 @@ const LandingPage = () => {
 
                                 <Typography sx={{
                                     ...fadeUp(0.25),
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: { xs: '1rem', md: '1.05rem' },
                                     color: C.textMuted,
                                     lineHeight: 1.8,
@@ -412,7 +412,7 @@ const LandingPage = () => {
                                         background: `linear-gradient(135deg, ${C.purple} 0%, ${C.purpleLight} 100%)`,
                                         color: '#ffffff',
                                         borderRadius: '8px',
-                                        fontFamily: "'DM Sans', sans-serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontWeight: 700,
                                         fontSize: '0.95rem',
                                         boxShadow: `0 4px 24px ${C.purple}40`,
@@ -429,7 +429,7 @@ const LandingPage = () => {
                                         border: `1px solid ${C.border}`,
                                         color: C.text,
                                         borderRadius: '8px',
-                                        fontFamily: "'DM Sans', sans-serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontWeight: 500,
                                         fontSize: '0.95rem',
                                         transition: 'all 0.25s ease',
@@ -511,7 +511,7 @@ const LandingPage = () => {
                                         border: `1px solid ${C.border}`,
                                         color: C.text,
                                         borderRadius: '8px',
-                                        fontFamily: "'DM Sans', sans-serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontWeight: 500, fontSize: '0.9rem',
                                         transition: 'all 0.25s ease',
                                         '&:hover': { borderColor: C.purple, color: C.purple, background: C.purpleDim },
@@ -533,13 +533,13 @@ const LandingPage = () => {
                                     <IconSchool size={30} color={C.purple} />
                                 </Box>
                                 <Typography sx={{
-                                    fontFamily: "'DM Serif Display', serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '1.5rem', color: C.text, mb: 1,
                                 }}>
                                     No hay cursos disponibles
                                 </Typography>
                                 <Typography sx={{
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '0.9rem', color: C.textMuted,
                                 }}>
                                     ¡Pronto habrá nuevos cursos disponibles!
@@ -610,14 +610,14 @@ const LandingPage = () => {
                                             <Icon size={22} color={C.purple} />
                                         </Box>
                                         <Typography sx={{
-                                            fontFamily: "'DM Serif Display', serif",
+                                            fontFamily: "'Inter', sans-serif",
                                             fontSize: '1.25rem', fontWeight: 400,
                                             color: C.text, mb: 1.5, lineHeight: 1.3,
                                         }}>
                                             {title}
                                         </Typography>
                                         <Typography sx={{
-                                            fontFamily: "'DM Sans', sans-serif",
+                                            fontFamily: "'Inter', sans-serif",
                                             fontSize: '0.875rem', color: C.textMuted, lineHeight: 1.75,
                                         }}>
                                             {desc}
@@ -635,14 +635,14 @@ const LandingPage = () => {
                     <Container maxWidth="md" sx={{ py: { xs: 8, md: 11 }, textAlign: 'center' }}>
                         <SectionLabel text="// Accede ahora" />
                         <Typography sx={{
-                            fontFamily: "'DM Serif Display', serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontSize: { xs: '2rem', md: '3rem' },
                             fontWeight: 400, color: C.text, lineHeight: 1.2, mb: 2,
                         }}>
                             ¿Listo para comenzar?
                         </Typography>
                         <Typography sx={{
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontSize: '1rem', color: C.textMuted,
                             mb: 5, maxWidth: 480, mx: 'auto', lineHeight: 1.75,
                         }}>
@@ -655,7 +655,7 @@ const LandingPage = () => {
                             background: `linear-gradient(135deg, ${C.purple} 0%, ${C.purpleLight} 100%)`,
                             color: '#ffffff',
                             borderRadius: '8px',
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontWeight: 700, fontSize: '1rem',
                             boxShadow: `0 6px 30px ${C.purple}40`,
                             transition: 'all 0.25s ease',

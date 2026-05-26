@@ -168,10 +168,10 @@ const StudentProjectRegistration = () => {
                 return (
                     <Grid container spacing={3}>
                         <Grid size={12}>
-                            <Typography variant="h5" sx={{ fontFamily: "'DM Serif Display', serif", color: C.text, fontSize: '1.4rem' }} gutterBottom>
+                            <Typography variant="h5" sx={{ fontFamily: "'Inter', sans-serif", color: C.text, fontSize: '1.4rem' }} gutterBottom>
                                 Seleccione una Actividad
                             </Typography>
-                            <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }} paragraph>
+                            <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "'Inter', sans-serif" }} paragraph>
                                 Elija la materia y actividad a la que desea inscribirse.
                             </Typography>
                         </Grid>
@@ -200,11 +200,11 @@ const StudentProjectRegistration = () => {
                                     >
                                         <Box display="flex" alignItems="center" mb={2}>
                                             <IconClipboardList stroke={1.5} size="1.5rem" color={C.purple} />
-                                            <Typography variant="h4" sx={{ color: proj.is_active_time ? C.purple : C.textMuted, marginLeft: 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
+                                            <Typography variant="h4" sx={{ color: proj.is_active_time ? C.purple : C.textMuted, marginLeft: 1, fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>
                                                 {proj.course_details?.subject_details?.name || proj.course_name}
                                             </Typography>
                                         </Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: C.text, fontFamily: "'DM Sans', sans-serif" }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: C.text, fontFamily: "'Inter', sans-serif" }}>
                                             {proj.name}
                                         </Typography>
                                         <Divider style={{ margin: '12px 0', borderColor: C.border }} />
@@ -262,7 +262,7 @@ const StudentProjectRegistration = () => {
 
                                 {/* 1. Datos del grupo */}
                                 <Grid size={12}>
-                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'DM Serif Display', serif" }}>
+                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'Inter', sans-serif" }}>
                                         1. Datos del Grupo
                                     </Typography>
                                 </Grid>
@@ -292,7 +292,7 @@ const StudentProjectRegistration = () => {
 
                                 {/* 2. Agregar integrantes */}
                                 <Grid size={12}>
-                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'DM Serif Display', serif", mt: 1 }}>
+                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'Inter', sans-serif", mt: 1 }}>
                                         2. Agregar Integrantes
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: C.textMuted, mt: 0.5 }}>
@@ -334,7 +334,7 @@ const StudentProjectRegistration = () => {
 
                                 {/* 3. Elegir líder */}
                                 <Grid size={12}>
-                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'DM Serif Display', serif", mt: 1 }}>
+                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'Inter', sans-serif", mt: 1 }}>
                                         3. Elegir Líder
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: C.textMuted, mt: 0.5 }}>
@@ -387,7 +387,7 @@ const StudentProjectRegistration = () => {
                             <Paper variant="outlined" sx={{ padding: 2, background: C.surface, borderColor: C.border, borderRadius: '12px', position: 'sticky', top: 16 }}>
                                 <Box display="flex" alignItems="center" gap={1} mb={1}>
                                     <IconUsers size={18} color={C.purple} />
-                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'DM Sans', sans-serif" }}>
+                                    <Typography variant="h5" sx={{ color: C.purple, fontFamily: "'Inter', sans-serif" }}>
                                         Integrantes del Grupo
                                     </Typography>
                                     {members.length > 0 && (
@@ -471,7 +471,7 @@ const StudentProjectRegistration = () => {
                     <Grid container justifyContent="center" style={{ textAlign: 'center', padding: 40 }}>
                         <Grid size={12}>
                             <IconCheck size={64} style={{ color: C.green, marginBottom: 16 }} />
-                            <Typography variant="h3" gutterBottom sx={{ color: C.purple, fontFamily: "'DM Serif Display', serif" }}>
+                            <Typography variant="h3" gutterBottom sx={{ color: C.purple, fontFamily: "'Inter', sans-serif" }}>
                                 ¡Registro Exitoso!
                             </Typography>
                             <Typography variant="h5" sx={{ color: C.text }} paragraph>
@@ -506,7 +506,7 @@ const StudentProjectRegistration = () => {
     };
 
     return (
-        <Box sx={{ minHeight: '100vh', background: C.bg, backgroundImage: DOT, position: 'relative', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
+        <Box sx={{ minHeight: '100vh', background: C.bg, backgroundImage: DOT, position: 'relative', overflow: 'hidden', fontFamily: "'Inter', sans-serif" }}>
             <style>{KEYFRAMES}</style>
             <Box sx={{ position: 'absolute', top: '5%', right: '-5%', width: { xs: 280, md: 480 }, height: { xs: 280, md: 480 }, borderRadius: '50%', background: `radial-gradient(circle, ${C.purpleLight}15 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
             <Box sx={{ position: 'absolute', bottom: '10%', left: '-10%', width: { xs: 180, md: 380 }, height: { xs: 180, md: 380 }, borderRadius: '50%', background: `radial-gradient(circle, ${C.purple}10 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
@@ -515,10 +515,10 @@ const StudentProjectRegistration = () => {
                 <Grid container justifyContent="center">
                     <Grid size={{ xs: 12, md: 10, lg: 9 }}>
                         <Box sx={{ p: { xs: 3, md: 5 }, background: C.surface, border: `1px solid ${C.border}`, borderRadius: '24px', boxShadow: `0 24px 64px ${C.frameShadow}` }}>
-                            <Typography sx={{ fontFamily: "'DM Serif Display', serif", fontSize: { xs: '2rem', md: '2.5rem' }, color: C.text, textAlign: 'center', mb: 1 }}>
+                            <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: { xs: '2rem', md: '2.5rem' }, color: C.text, textAlign: 'center', mb: 1 }}>
                                 Registro de Actividades
                             </Typography>
-                            <Typography sx={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1rem', color: C.textMuted, textAlign: 'center', mb: 5 }}>
+                            <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '1rem', color: C.textMuted, textAlign: 'center', mb: 5 }}>
                                 Inscribe a tu grupo en las asignaturas disponibles
                             </Typography>
 
@@ -527,7 +527,7 @@ const StudentProjectRegistration = () => {
                                 alternativeLabel
                                 sx={{
                                     mb: 6,
-                                    '& .MuiStepLabel-label': { color: C.textMuted, fontFamily: "'DM Sans', sans-serif" },
+                                    '& .MuiStepLabel-label': { color: C.textMuted, fontFamily: "'Inter', sans-serif" },
                                     '& .MuiStepIcon-root': { color: C.border },
                                     '& .MuiStepIcon-root.Mui-active': { color: C.purple },
                                     '& .MuiStepIcon-root.Mui-completed': { color: C.green }

@@ -79,7 +79,7 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
             {/* Content */}
             <Box sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Typography sx={{
-                    fontFamily: "'DM Serif Display', serif",
+                    fontFamily: "'Inter', sans-serif",
                     fontSize: '1.05rem',
                     color: C.text,
                     lineHeight: 1.3,
@@ -112,7 +112,7 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                             <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <IconCalendarTime size={12} color={C.textMuted} />
                                 <Typography sx={{
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '0.75rem',
                                     color: C.textMuted,
                                 }}>
@@ -133,7 +133,7 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                             border: `1px solid ${C.border}`,
                             borderRadius: '6px',
                             color: C.textMuted,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontWeight: 500,
                             fontSize: '0.83rem',
                             transition: 'all 0.2s',
@@ -152,7 +152,7 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                             border: `1px solid ${C.green}35`,
                             borderRadius: '6px',
                             color: C.green,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontWeight: 600,
                             fontSize: '0.83rem',
                             transition: 'all 0.2s',

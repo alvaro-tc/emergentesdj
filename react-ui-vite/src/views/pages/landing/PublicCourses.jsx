@@ -120,7 +120,7 @@ const PublicCourses = () => {
 
     const SectionHeading = ({ children }) => (
         <Typography sx={{
-            fontFamily: "'DM Serif Display', serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: { xs: '2rem', md: '2.75rem' },
             fontWeight: 400,
             color: C.text,
@@ -137,7 +137,7 @@ const PublicCourses = () => {
                 minHeight: '100vh',
                 background: C.bg,
                 backgroundImage: DOT,
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "'Inter', sans-serif",
                 transition: 'background 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden'
@@ -168,7 +168,7 @@ const PublicCourses = () => {
                         </SectionHeading>
                         <Typography sx={{
                             mt: 2,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontSize: { xs: '1rem', md: '1.05rem' },
                             color: C.textMuted,
                             lineHeight: 1.8,
@@ -215,7 +215,7 @@ const PublicCourses = () => {
                                                             border: `1px solid ${C.purple}40`,
                                                             borderRadius: '6px',
                                                             color: '#ffffff',
-                                                            fontFamily: "'DM Sans', sans-serif",
+                                                            fontFamily: "'Inter', sans-serif",
                                                             fontWeight: 600,
                                                             fontSize: '0.83rem',
                                                             transition: 'all 0.2s',
@@ -233,10 +233,10 @@ const PublicCourses = () => {
                                 <Grid size={12}>
                                     <Box textAlign="center" py={10}>
                                         <Typography variant="h1" sx={{ fontSize: '4rem', mb: 2, opacity: 0.3 }}>📚</Typography>
-                                        <Typography variant="h4" color={C.textMuted} gutterBottom sx={{ fontFamily: "'DM Serif Display', serif" }}>
+                                        <Typography variant="h4" color={C.textMuted} gutterBottom sx={{ fontFamily: "'Inter', sans-serif" }}>
                                             No hay cursos disponibles en este momento.
                                         </Typography>
-                                        <Typography variant="body1" color={C.textMuted} sx={{ mb: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                                        <Typography variant="body1" color={C.textMuted} sx={{ mb: 4, fontFamily: "'Inter', sans-serif" }}>
                                             ¡Mantente atento! Pronto habrá nuevos cursos disponibles.
                                         </Typography>
                                         <Box component={RouterLink} to="/" sx={{
@@ -246,7 +246,7 @@ const PublicCourses = () => {
                                             border: `1px solid ${C.border}`,
                                             color: C.text,
                                             borderRadius: '8px',
-                                            fontFamily: "'DM Sans', sans-serif",
+                                            fontFamily: "'Inter', sans-serif",
                                             fontWeight: 500, fontSize: '0.9rem',
                                             transition: 'all 0.25s ease',
                                             '&:hover': { borderColor: C.purple, color: C.purple, background: C.purpleDim },
@@ -282,7 +282,7 @@ const PublicCourses = () => {
                     }
                 }}
             >
-                <DialogTitle sx={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', pb: 1, color: C.text, fontFamily: "'DM Serif Display', serif" }}>
+                <DialogTitle sx={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', pb: 1, color: C.text, fontFamily: "'Inter', sans-serif" }}>
                     Inscripción al Curso
                 </DialogTitle>
                 <DialogContent>
@@ -293,7 +293,7 @@ const PublicCourses = () => {
                             textAlign: 'center',
                             border: `1px solid ${C.purple}30`
                         }}>
-                            <Typography sx={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.2rem', color: C.purple, mb: 0.5 }}>
+                            <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '1.2rem', color: C.purple, mb: 0.5 }}>
                                 {selectedCourse.subject_details?.name}
                             </Typography>
                             <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', color: C.textMuted, mb: 1.5 }}>
@@ -312,7 +312,7 @@ const PublicCourses = () => {
                         <form onSubmit={handleSubmit}>
                             <Grid container spacing={2.5}>
                                 <Grid size={12}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
+                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: C.textMuted, fontFamily: "'Inter', sans-serif" }}>
                                         Por favor completa tus datos para solicitar la inscripción
                                     </Typography>
                                 </Grid>
@@ -347,10 +347,10 @@ const PublicCourses = () => {
                     ) : (
                         <Box textAlign="center" py={4}>
                             <Typography variant="h1" sx={{ fontSize: '4rem', mb: 2 }}>✅</Typography>
-                            <Typography sx={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', color: C.purple, mb: 1 }}>
+                            <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '1.5rem', color: C.purple, mb: 1 }}>
                                 ¡Solicitud Enviada!
                             </Typography>
-                            <Typography sx={{ fontFamily: "'DM Sans', sans-serif", color: C.textMuted, mb: 3 }}>
+                            <Typography sx={{ fontFamily: "'Inter', sans-serif", color: C.textMuted, mb: 3 }}>
                                 Tu solicitud de inscripción ha sido enviada correctamente. Recibirás una confirmación pronto.
                             </Typography>
                             <Button onClick={handleCloseModal} sx={{ borderRadius: 2, px: 4, fontWeight: 600, background: `linear-gradient(135deg, ${C.purple} 0%, ${C.purpleLight} 100%)`, color: '#fff', '&:hover': { filter: 'brightness(1.1)' } }}>

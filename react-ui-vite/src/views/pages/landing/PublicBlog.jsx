@@ -85,7 +85,7 @@ const BlogCard = ({ post, isDark, C, onClick }) => {
                 <Typography
                     variant="h6"
                     sx={{
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "'Inter', sans-serif",
                         fontWeight: 700,
                         fontSize: '1rem',
                         lineHeight: 1.4,
@@ -121,7 +121,7 @@ const BlogCard = ({ post, isDark, C, onClick }) => {
                         <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: `${C.purple}22`, color: C.purple }}>
                             {post.author_name?.charAt(0).toUpperCase()}
                         </Avatar>
-                        <Typography sx={{ fontSize: '0.75rem', color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: C.textMuted, fontFamily: "'Inter', sans-serif" }}>
                             {post.author_name}
                         </Typography>
                     </Stack>
@@ -194,7 +194,7 @@ const PublicBlog = () => {
                     <Typography
                         variant="h2"
                         sx={{
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontWeight: 800,
                             fontSize: { xs: '2rem', md: '3rem' },
                             background: `linear-gradient(135deg, ${C.purple} 0%, ${C.purpleLight} 100%)`,
@@ -205,7 +205,7 @@ const PublicBlog = () => {
                     >
                         Blog
                     </Typography>
-                    <Typography sx={{ color: C.textMuted, fontSize: '1.05rem', fontFamily: "'DM Sans', sans-serif", maxWidth: 520 }}>
+                    <Typography sx={{ color: C.textMuted, fontSize: '1.05rem', fontFamily: "'Inter', sans-serif", maxWidth: 520 }}>
                         Noticias, artículos y recursos educativos del equipo Sigeldyw.
                     </Typography>
                 </Container>
@@ -253,7 +253,7 @@ const PublicBlog = () => {
                                 )}
                             </Stack>
                             <Typography sx={{
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontWeight: 800,
                                 fontSize: { xs: '1.25rem', md: '1.75rem' },
                                 lineHeight: 1.3,
@@ -271,7 +271,7 @@ const PublicBlog = () => {
                                     <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', bgcolor: `${C.purple}22`, color: C.purple }}>
                                         {featured.author_name?.charAt(0).toUpperCase()}
                                     </Avatar>
-                                    <Typography sx={{ fontSize: '0.85rem', color: C.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
+                                    <Typography sx={{ fontSize: '0.85rem', color: C.textMuted, fontFamily: "'Inter', sans-serif" }}>
                                         {featured.author_name}
                                     </Typography>
                                 </Stack>
@@ -297,7 +297,7 @@ const PublicBlog = () => {
                             width: { xs: '100%', sm: 280 },
                             borderRadius: 2,
                             '& .MuiOutlinedInput-notchedOutline': { borderColor: C.border },
-                            '& input': { color: C.text, fontFamily: "'DM Sans', sans-serif" },
+                            '& input': { color: C.text, fontFamily: "'Inter', sans-serif" },
                             background: C.cardBg,
                         }}
                     />
@@ -358,7 +358,7 @@ const PublicBlog = () => {
                 ) : (
                     <Box sx={{ textAlign: 'center', py: 10 }}>
                         <IconArticle size={64} color={C.textMuted} opacity={0.4} />
-                        <Typography sx={{ color: C.textMuted, mt: 2, fontFamily: "'DM Sans', sans-serif" }}>
+                        <Typography sx={{ color: C.textMuted, mt: 2, fontFamily: "'Inter', sans-serif" }}>
                             No se encontraron artículos
                         </Typography>
                     </Box>

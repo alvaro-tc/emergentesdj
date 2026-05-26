@@ -50,7 +50,7 @@ const PublicPublications = () => {
 
     const SectionHeading = ({ children }) => (
         <Typography sx={{
-            fontFamily: "'DM Serif Display', serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: { xs: '2rem', md: '2.75rem' },
             fontWeight: 400,
             color: C.text,
@@ -65,7 +65,7 @@ const PublicPublications = () => {
             minHeight: '100vh',
             background: C.bg,
             backgroundImage: DOT,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', sans-serif",
             transition: 'background 0.3s ease',
             position: 'relative',
             overflow: 'hidden'
@@ -98,7 +98,7 @@ const PublicPublications = () => {
                     </SectionHeading>
                     <Typography sx={{
                         mt: 2,
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "'Inter', sans-serif",
                         fontSize: { xs: '1rem', md: '1.05rem' },
                         color: C.textMuted,
                         lineHeight: 1.8,
@@ -162,7 +162,7 @@ const PublicPublications = () => {
 
                                     <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                         <Typography sx={{
-                                            fontFamily: "'DM Serif Display', serif",
+                                            fontFamily: "'Inter', sans-serif",
                                             fontSize: '1.4rem',
                                             color: C.text,
                                             mb: 1,
@@ -180,7 +180,7 @@ const PublicPublications = () => {
                                         </Typography>
                                         
                                         <Typography sx={{
-                                            fontFamily: "'DM Sans', sans-serif",
+                                            fontFamily: "'Inter', sans-serif",
                                             fontSize: '0.9rem',
                                             color: C.textMuted,
                                             lineHeight: 1.7,

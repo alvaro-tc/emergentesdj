@@ -71,7 +71,7 @@ const PublicBlogPost = () => {
                     sx={{
                         display: 'inline-flex', alignItems: 'center', gap: 0.75,
                         mb: 4, background: 'none', border: 'none', cursor: 'pointer', p: 0,
-                        color: C.textMuted, fontFamily: "'DM Sans', sans-serif", fontSize: '0.875rem',
+                        color: C.textMuted, fontFamily: "'Inter', sans-serif", fontSize: '0.875rem',
                         '&:hover': { color: C.purple },
                         transition: 'color 0.2s',
                     }}
@@ -90,7 +90,7 @@ const PublicBlogPost = () => {
                     </Box>
                 ) : notFound ? (
                     <Box sx={{ textAlign: 'center', py: 10 }}>
-                        <Typography variant="h4" sx={{ color: C.text, fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>
+                        <Typography variant="h4" sx={{ color: C.text, fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
                             Artículo no encontrado
                         </Typography>
                         <Typography sx={{ color: C.textMuted, mt: 2 }}>
@@ -118,7 +118,7 @@ const PublicBlogPost = () => {
                         <Typography
                             variant="h1"
                             sx={{
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontWeight: 800,
                                 fontSize: { xs: '1.75rem', md: '2.5rem' },
                                 lineHeight: 1.25,
@@ -136,7 +136,7 @@ const PublicBlogPost = () => {
                                     {post.author_name?.charAt(0).toUpperCase()}
                                 </Avatar>
                                 <Box>
-                                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.text, fontFamily: "'DM Sans', sans-serif" }}>
+                                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.text, fontFamily: "'Inter', sans-serif" }}>
                                         {post.author_name}
                                     </Typography>
                                     <Stack direction="row" spacing={1.5} alignItems="center">
@@ -179,7 +179,7 @@ const PublicBlogPost = () => {
                                 background: C.blockquote,
                             }}>
                                 <Typography sx={{
-                                    fontFamily: "'DM Sans', sans-serif",
+                                    fontFamily: "'Inter', sans-serif",
                                     fontSize: '1.05rem',
                                     fontStyle: 'italic',
                                     color: C.text,
@@ -195,9 +195,9 @@ const PublicBlogPost = () => {
                         {/* Content */}
                         <Box
                             sx={{
-                                '& p': { color: C.text, lineHeight: 1.9, mb: 2, fontFamily: "'DM Sans', sans-serif", fontSize: '1rem' },
-                                '& h2': { color: C.text, fontWeight: 700, fontSize: '1.4rem', mt: 4, mb: 1.5, fontFamily: "'DM Sans', sans-serif" },
-                                '& h3': { color: C.text, fontWeight: 700, fontSize: '1.15rem', mt: 3, mb: 1, fontFamily: "'DM Sans', sans-serif" },
+                                '& p': { color: C.text, lineHeight: 1.9, mb: 2, fontFamily: "'Inter', sans-serif", fontSize: '1rem' },
+                                '& h2': { color: C.text, fontWeight: 700, fontSize: '1.4rem', mt: 4, mb: 1.5, fontFamily: "'Inter', sans-serif" },
+                                '& h3': { color: C.text, fontWeight: 700, fontSize: '1.15rem', mt: 3, mb: 1, fontFamily: "'Inter', sans-serif" },
                                 '& ul, & ol': { color: C.text, pl: 3, mb: 2, lineHeight: 2 },
                                 '& li': { mb: 0.5 },
                                 '& blockquote': {

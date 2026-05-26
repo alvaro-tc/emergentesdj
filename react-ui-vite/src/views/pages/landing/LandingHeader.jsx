@@ -99,7 +99,7 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
                                         px: 1.75,
                                         py: 0.75,
                                         textDecoration: 'none',
-                                        fontFamily: "'DM Sans', sans-serif",
+                                        fontFamily: "'Inter', sans-serif",
                                         fontSize: '0.875rem',
                                         fontWeight: isActive(link.to) ? 600 : 400,
                                         color: isActive(link.to) ? C.purple : C.textMuted,
@@ -160,7 +160,7 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
                                 py: 1,
                                 border: `1px solid ${C.purple}`,
                                 borderRadius: '6px',
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontSize: '0.875rem',
                                 fontWeight: 600,
                                 color: C.purple,
@@ -243,7 +243,7 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
                             }}
                         >
                             <Typography sx={{
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', sans-serif",
                                 fontWeight: isActive(link.to) ? 600 : 400,
                                 fontSize: '0.95rem',
                                 color: isActive(link.to) ? C.purple : C.text,
@@ -265,7 +265,7 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
                             py: 1.5,
                             border: `1px solid ${C.purple}`,
                             borderRadius: '6px',
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', sans-serif",
                             fontWeight: 600, fontSize: '0.95rem',
                             color: C.purple,
                             transition: 'all 0.2s',
