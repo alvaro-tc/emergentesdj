@@ -42,7 +42,7 @@ export const administration = {
         },
         {
             id: 'courses',
-            title: 'Paralelos',
+            title: 'Cursos',
             type: 'item',
             url: '/school/courses',
             icon: icons.IconLayoutGrid,
