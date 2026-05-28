@@ -141,7 +141,7 @@ export const useTaskGrading = (activeCourse, account, location) => {
         setLoading(true);
         const targetSubCrit = taskData.subCriterionId || selectedSubCrit;
         const isSpecial = String(targetSubCrit).startsWith('special-');
-        const payload = { name: taskData.name, weight: taskData.weight };
+        const payload = { name: taskData.name, weight: taskData.weight, activity_date: taskData.activityDate || null };
         if (isSpecial) payload.special_criterion = parseInt(String(targetSubCrit).replace('special-', ''));
         else payload.sub_criterion = parseInt(targetSubCrit);
         axios.post(`${configData.API_SERVER}course-tasks/`, payload)
@@ -158,7 +158,8 @@ export const useTaskGrading = (activeCourse, account, location) => {
         if (!editTaskData.name) return;
         setLoading(true);
         const isSpecial = String(selectedSubCrit).startsWith('special-');
-        const payload = { ...editTaskData };
+        const { activityDate, ...rest } = editTaskData;
+        const payload = { ...rest, activity_date: activityDate !== undefined ? (activityDate || null) : rest.activity_date };
         if (isSpecial) payload.special_criterion = parseInt(selectedSubCrit.replace('special-', ''));
         else payload.sub_criterion = parseInt(selectedSubCrit);
         axios.put(`${configData.API_SERVER}course-tasks/${editingTaskId}/`, payload)

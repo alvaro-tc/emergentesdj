@@ -200,7 +200,7 @@ const LandingFooter = ({ isDark }) => {
                             color: C.textMuted,
                             letterSpacing: '0.04em',
                         }}>
-                            © 2026 Plataforma Emergentes — Todos los derechos reservados
+                            © 2026 Emergentes - By. M. Torrez
                         </Typography>
                         <Typography sx={{
                             fontFamily: "'JetBrains Mono', monospace",

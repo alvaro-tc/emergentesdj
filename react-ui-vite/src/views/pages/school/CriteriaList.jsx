@@ -86,7 +86,7 @@ const CriteriaList = () => {
         if (!templateToDelete) return;
         try {
             axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-            await axios.delete(`${configData.API_SERVER}evaluation-templates/${templateToDelete}`);
+            await axios.delete(`${configData.API_SERVER}evaluation-templates/${templateToDelete}/`);
             fetchTemplates();
             setOpenDeleteDialog(false);
             setTemplateToDelete(null);

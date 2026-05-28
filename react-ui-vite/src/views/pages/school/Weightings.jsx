@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
     Card, CardContent, Grid, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Tooltip, LinearProgress, Chip, Snackbar
+    IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Tooltip, LinearProgress, Chip, Snackbar,
+    Switch, FormControlLabel
 } from '@mui/material';
 import MainCard from '../../../ui-component/cards/MainCard';
 import { IconTrash, IconEdit, IconPlus, IconLock, IconStar, IconEye, IconEyeOff, IconClipboardList, IconClipboardOff } from '@tabler/icons-react';
@@ -25,7 +26,7 @@ const Weightings = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [currentSubCriterion, setCurrentSubCriterion] = useState(null);
     const [parentCriterionId, setParentCriterionId] = useState(null);
-    const [formData, setFormData] = useState({ name: '', percentage: '' });
+    const [formData, setFormData] = useState({ name: '', percentage: '', is_project: false });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -94,14 +95,14 @@ const Weightings = () => {
     const handleOpenDialog = (parentCritId, subCrit = null) => {
         setParentCriterionId(parentCritId);
         setCurrentSubCriterion(subCrit);
-        setFormData(subCrit ? { name: subCrit.name, percentage: subCrit.percentage } : { name: '', percentage: '' });
+        setFormData(subCrit ? { name: subCrit.name, percentage: subCrit.percentage, is_project: subCrit.is_project || false } : { name: '', percentage: '', is_project: false });
         setOpenDialog(true);
     };
 
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setCurrentSubCriterion(null);
-        setFormData({ name: '', percentage: '' });
+        setFormData({ name: '', percentage: '', is_project: false });
     };
 
     const handleSave = () => {
@@ -464,7 +465,7 @@ const Weightings = () => {
             }
 
             {/* Dialog for Add/Edit Regular SubCriteria */}
-            < Dialog open={openDialog} onClose={handleCloseDialog} >
+            <Dialog open={openDialog} onClose={handleCloseDialog}>
                 <DialogTitle>{currentSubCriterion ? 'Editar Sub-criterio' : 'Añadir Sub-criterio'}</DialogTitle>
                 <DialogContent>
                     <TextField
@@ -483,6 +484,17 @@ const Weightings = () => {
                         value={formData.percentage}
                         onChange={(e) => setFormData({ ...formData, percentage: e.target.value })}
                         helperText="Puntos para este sub-criterio"
+                    />
+                    <FormControlLabel
+                        sx={{ mt: 1 }}
+                        control={
+                            <Switch
+                                checked={formData.is_project}
+                                onChange={(e) => setFormData({ ...formData, is_project: e.target.checked })}
+                                color="primary"
+                            />
+                        }
+                        label="Es Proyecto (calificación grupal)"
                     />
                 </DialogContent>
                 <DialogActions>

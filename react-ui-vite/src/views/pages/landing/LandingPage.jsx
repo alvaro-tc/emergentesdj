@@ -365,20 +365,20 @@ const LandingPage = () => {
 
                                 <Box sx={fadeUp(0.15)}>
                                     <Typography sx={{
-                                        fontFamily: "'Inter', sans-serif",
+                                        fontFamily: "'Poppins', sans-serif",
                                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.8rem', lg: '4.2rem' },
-                                        fontWeight: 400,
+                                        fontWeight: 900,
                                         lineHeight: 1.1,
                                         color: C.text,
                                         mb: 0.5,
                                     }}>
-                                        Bienvenido a la
+                                        Plataforma
                                     </Typography>
                                     <Typography component="span" sx={{
                                         display: 'block',
-                                        fontFamily: "'Inter', sans-serif",
+                                        fontFamily: "'Poppins', sans-serif",
                                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.8rem', lg: '4.2rem' },
-                                        fontWeight: 400,
+                                        fontWeight: 900,
                                         lineHeight: 1.1,
                                         background: `linear-gradient(90deg, ${C.purple}, ${C.purpleLight}, ${C.purple})`,
                                         backgroundSize: '200% auto',
@@ -388,7 +388,7 @@ const LandingPage = () => {
                                         animation: 'lp-shimmer 6s linear infinite',
                                         mb: 3,
                                     }}>
-                                        Plataforma EMERGENTES
+                                         EMERGENTES
                                     </Typography>
                                 </Box>
 

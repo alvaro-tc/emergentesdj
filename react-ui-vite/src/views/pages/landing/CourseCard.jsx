@@ -130,7 +130,7 @@ const CourseCard = ({ course, getImageUrl, isDark, mobile = false, actions }) =>
                             textDecoration: 'none',
                             py: 1.1,
                             background: 'transparent',
-                            border: `1px solid ${C.border}`,
+                            border: `1px solid ${C.purple}`,
                             borderRadius: '6px',
                             color: C.textMuted,
                             fontFamily: "'Inter', sans-serif",

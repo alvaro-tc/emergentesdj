@@ -105,7 +105,7 @@ const TaskGrading = () => {
                 <IconEye />
             </Fab>
 
-            <TaskDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSave={handleAddTask} subCriteria={subCriteria} specialCriteria={specialCriteria} initialSubCriterion={selectedSubCrit} />
+            <TaskDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSave={(data) => { handleAddTask(data); setDialogOpen(false); }} subCriteria={subCriteria} specialCriteria={specialCriteria} initialSubCriterion={selectedSubCrit} />
             <ManageTasksDialog open={manageOpen} onClose={() => setManageOpen(false)} tasks={tasks} onUpdateTask={handleUpdateTask} onToggleTaskField={handleToggleTaskField} onDeleteTask={handleDeleteTask} onBulkGrade={handleBulkGrade} />
             <ExportTasksDialog open={exportOpen} onClose={() => setExportOpen(false)} tasks={tasks} visibleTasks={visibleTasks} onExport={handleExportTasks} />
             <ImportTasksDialog open={importOpen} onClose={() => setImportOpen(false)} tasks={tasks} rows={rows} onImport={handleImport} />

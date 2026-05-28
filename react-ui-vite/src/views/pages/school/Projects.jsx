@@ -7,13 +7,13 @@ import {
     Typography,
     MenuItem,
     TextField,
+    Paper,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
     FormControl,
     InputLabel,
     Select,
@@ -26,12 +26,7 @@ import {
     IconButton,
     Tooltip,
     Divider,
-    Checkbox,
-    List,
-    ListItem,
-    ListItemText,
     Collapse,
-    ListItemSecondaryAction,
     Snackbar,
     Alert,
     Switch,
@@ -40,7 +35,7 @@ import {
     Box,
     InputAdornment
 } from '@mui/material';
-import { IconPlus, IconTrash, IconUsers, IconTarget, IconSettings, IconAlertTriangle, IconFileExport, IconSearch, IconCrown, IconX } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconUsers, IconSettings, IconAlertTriangle, IconFileExport, IconSearch, IconCrown, IconX } from '@tabler/icons-react';
 // Rename or use directly
 import axios from 'axios';
 import config from '../../../config';
@@ -61,8 +56,6 @@ const Projects = () => {
     const [tableSearch, setTableSearch] = useState('');
 
     // Dialogs State
-    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [manageDialogOpen, setManageDialogOpen] = useState(false);
     const [deleteConfirmDialogOpen, setDeleteConfirmDialogOpen] = useState(false);
@@ -75,7 +68,6 @@ const Projects = () => {
     const [registrationStart, setRegistrationStart] = useState('');
     const [registrationEnd, setRegistrationEnd] = useState('');
 
-    const [pendingToggle, setPendingToggle] = useState(null);
     const [projectToDelete, setProjectToDelete] = useState(null);
 
     // Manage UI State
@@ -146,40 +138,6 @@ const Projects = () => {
         }).catch(err => {
             console.error(err);
         });
-    };
-
-    // Assign Project Dialog (Toggle SubCriterion is_project)
-    const handleRequestToggle = (subCriterionId) => {
-        const subCrit = subCriteria.find(sc => sc.id === subCriterionId);
-        if (!subCrit) return;
-
-        setPendingToggle({ id: subCriterionId, currentState: subCrit.is_project });
-        setConfirmDialogOpen(true);
-    };
-
-    const handleConfirmToggle = () => {
-        if (!pendingToggle) return;
-
-        const payload = {
-            is_project: !pendingToggle.currentState
-        };
-
-        // Only send max_members if marking as project
-        if (!pendingToggle.currentState) {
-            payload.max_members = maxMembersInput === '' ? null : parseInt(maxMembersInput);
-        }
-
-        axios.patch(`${config.API_SERVER}course-sub-criteria/${pendingToggle.id}/`, payload)
-            .then(() => {
-                setConfirmDialogOpen(false);
-                setPendingToggle(null);
-                setMaxMembersInput('');
-                loadData();
-            }).catch(err => {
-                console.error(err);
-                setConfirmDialogOpen(false);
-                setPendingToggle(null);
-            });
     };
 
     // Edit Rules Handlers
@@ -434,7 +392,8 @@ const Projects = () => {
     };
 
     const subjectName = activeCourse ? (activeCourse.subject_details?.name || activeCourse.subject?.name || 'Materia') : '';
-    const projectSubCriteria = subCriteria.filter(sc => sc.is_project);
+    const subCriteriaWithProjects = new Set(projects.map(p => p.sub_criterion));
+    const projectSubCriteria = subCriteria.filter(sc => sc.is_project || subCriteriaWithProjects.has(sc.id));
 
     const bySubCriterion = selectedSubCriterion
         ? projects.filter(p => p.sub_criterion === selectedSubCriterion)
@@ -477,16 +436,6 @@ const Projects = () => {
                                 </Typography>
                             </Grid>
                             <Grid>
-                                <Button
-                                    variant="outlined"
-                                    color="primary"
-                                    startIcon={<IconTarget />}
-                                    onClick={() => setAssignDialogOpen(true)}
-                                    disabled={!activeCourse}
-                                    style={{ marginRight: 8 }}
-                                >
-                                    Asignar Proyecto
-                                </Button>
                                 {selectedSubCriterion && (
                                     <Button
                                         variant="outlined"
@@ -557,14 +506,10 @@ const Projects = () => {
             <Grid size={12}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                            Grupos registrados:
-                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={600}>Grupos registrados:</Typography>
                         <Chip
                             label={`${bySubCriterion.length} total${tableSearch ? ` · ${filteredProjects.length} coinciden` : ''}`}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
+                            size="small" color="primary" variant="outlined"
                         />
                     </Box>
                     <TextField
@@ -575,9 +520,7 @@ const Projects = () => {
                         sx={{ width: 300 }}
                         InputProps={{
                             startAdornment: (
-                                <InputAdornment position="start">
-                                    <IconSearch size={16} />
-                                </InputAdornment>
+                                <InputAdornment position="start"><IconSearch size={16} /></InputAdornment>
                             ),
                         }}
                     />
@@ -588,7 +531,7 @@ const Projects = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>#</TableCell>
+                                <TableCell>Grupo</TableCell>
                                 <TableCell>Nombre del Proyecto</TableCell>
                                 <TableCell>Miembros</TableCell>
                                 <TableCell>
@@ -608,7 +551,7 @@ const Projects = () => {
                                 <TableRow key={project.id} hover>
                                     <TableCell>
                                         {project.group_number != null
-                                            ? <Chip label={project.group_number} size="small" color="primary" />
+                                            ? <Chip label={`Grupo ${project.group_number}`} size="small" color="primary" />
                                             : <Typography variant="caption" color="textSecondary">—</Typography>}
                                     </TableCell>
                                     <TableCell>
@@ -625,10 +568,7 @@ const Projects = () => {
                                                     <Typography
                                                         key={mem.id}
                                                         variant="caption"
-                                                        sx={{
-                                                            fontWeight: isLeader ? 700 : 400,
-                                                            color: isLeader ? 'primary.main' : 'text.primary',
-                                                        }}
+                                                        sx={{ fontWeight: isLeader ? 700 : 400, color: isLeader ? 'primary.main' : 'text.primary' }}
                                                     >
                                                         {isLeader ? '★ ' : '· '}{name}
                                                     </Typography>
@@ -678,94 +618,6 @@ const Projects = () => {
                     </Table>
                 </TableContainer>
             </Grid>
-            {/* Confirmation Dialog */}
-            <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Confirmar Cambio</DialogTitle>
-                <DialogContent>
-                    {pendingToggle && (
-                        <>
-                            {pendingToggle.currentState ? (
-                                <Alert severity="warning" style={{ marginBottom: 16 }}>
-                                    <Typography variant="body2">
-                                        <strong>Desmarcar como Proyecto</strong>
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Al desmarcar este sub-criterio como proyecto, todas las calificaciones grupales se eliminarán
-                                        y los estudiantes podrán ser calificados individualmente.
-                                    </Typography>
-                                </Alert>
-                            ) : (
-                                <Alert severity="info" style={{ marginBottom: 16 }}>
-                                    <Typography variant="body2">
-                                        <strong>Marcar como Proyecto</strong>
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Esta acción permitirá asignar calificaciones grupales a este sub-criterio.
-                                    </Typography>
-                                </Alert>
-                            )}
-                            {!pendingToggle.currentState && (
-                                <TextField
-                                    fullWidth
-                                    label="Cantidad Máxima de Participantes (Opcional)"
-                                    type="number"
-                                    value={maxMembersInput}
-                                    onChange={(e) => setMaxMembersInput(e.target.value)}
-                                    variant="outlined"
-                                    style={{ marginTop: 16, marginBottom: 8 }}
-                                    helperText="Deje vacío para sin límite"
-                                />
-                            )}
-                            <Typography variant="body1">
-                                ¿Está seguro de que desea continuar?
-                            </Typography>
-                        </>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleConfirmToggle} color="primary" variant="contained">Confirmar</Button>
-                </DialogActions>
-            </Dialog>
-            {/* Assign Project Dialog */}
-            <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Asignar Proyectos a Sub-Criterios</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" gutterBottom>
-                        Marque los sub-criterios que requieren trabajo grupal (proyectos)
-                    </Typography>
-                    <List>
-                        {subCriteria.map(sc => (
-                            <ListItem key={sc.id}>
-                                <div style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }} onClick={() => handleRequestToggle(sc.id)}>
-                                    <Checkbox
-                                        checked={sc.is_project}
-                                        edge="start"
-                                        tabIndex={-1}
-                                        disableRipple
-                                    />
-                                    <ListItemText
-                                        primary={sc.name}
-                                        secondary={`${sc.percentage}%`}
-                                    />
-                                </div>
-                                {sc.is_project && (
-                                    <ListItemSecondaryAction>
-                                        <Tooltip title="Configurar reglas (Max Integrantes)">
-                                            <IconButton edge="end" onClick={() => handleOpenEditRules(sc)}>
-                                                <IconSettings />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </ListItemSecondaryAction>
-                                )}
-                            </ListItem>
-                        ))}
-                    </List>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setAssignDialogOpen(false)}>Cerrar</Button>
-                </DialogActions>
-            </Dialog>
             {/* Create Dialog */}
             <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}>
@@ -815,7 +667,7 @@ const Projects = () => {
                                     onChange={handleCreateInputChange}
                                     label="Sub-Criterio (Obligatorio)"
                                 >
-                                    {projectSubCriteria.map(sc => (
+                                    {subCriteria.map(sc => (
                                         <MenuItem key={sc.id} value={sc.id}>
                                             {sc.name} ({sc.percentage}%)
                                         </MenuItem>

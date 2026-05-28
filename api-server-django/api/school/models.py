@@ -189,7 +189,8 @@ class CourseTask(models.Model):
     weight = models.IntegerField(default=1, help_text="Weight of the task (e.g., 2 means it counts as 2 tasks)")
     is_locked = models.BooleanField(default=False)
     is_public = models.BooleanField(default=True)
-    
+    activity_date = models.DateField(null=True, blank=True)
+
     def clean(self):
         from django.core.exceptions import ValidationError
         # Ensure exactly one of sub_criterion or special_criterion is set

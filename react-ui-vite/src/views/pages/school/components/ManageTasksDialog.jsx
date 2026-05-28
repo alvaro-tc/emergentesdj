@@ -6,11 +6,11 @@ import { BulkConfirmDialog } from './TaskGradingDialogs';
 
 const ManageTasksDialog = React.memo(({ open, onClose, tasks, onUpdateTask, onToggleTaskField, onDeleteTask, onBulkGrade }) => {
     const [editId, setEditId] = useState(null);
-    const [editData, setEditData] = useState({ name: '', weight: 1 });
+    const [editData, setEditData] = useState({ name: '', weight: 1, activityDate: '' });
     const [bulkId, setBulkId] = useState(null);
     const [bulkConfirm, setBulkConfirm] = useState({ open: false, taskId: null, letter: null });
 
-    const startEdit = (task) => { setEditId(task.id); setEditData({ name: task.name, weight: task.weight }); };
+    const startEdit = (task) => { setEditId(task.id); setEditData({ name: task.name, weight: task.weight, activityDate: task.activity_date || '' }); };
     const cancelEdit = () => setEditId(null);
     const saveEdit = () => { onUpdateTask(editId, editData); cancelEdit(); };
     const confirmBulk = () => { onBulkGrade(bulkConfirm.taskId, bulkConfirm.letter); setBulkId(null); setBulkConfirm({ open: false, taskId: null, letter: null }); };
@@ -49,6 +49,7 @@ const ManageTasksDialog = React.memo(({ open, onClose, tasks, onUpdateTask, onTo
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
+                                    <TableCell sx={{ width: 120 }}>Fecha</TableCell>
                                     <TableCell>Nombre</TableCell>
                                     <TableCell align="center" sx={{ width: 80 }}>Peso</TableCell>
                                     <TableCell align="center" sx={{ width: 80 }}>Visible</TableCell>
@@ -59,6 +60,11 @@ const ManageTasksDialog = React.memo(({ open, onClose, tasks, onUpdateTask, onTo
                             <TableBody>
                                 {tasks.map(task => (
                                     <TableRow key={task.id}>
+                                        <TableCell>
+                                            {editId === task.id
+                                                ? <TextField type="date" value={editData.activityDate} onChange={e => setEditData(d => ({ ...d, activityDate: e.target.value }))} size="small" InputLabelProps={{ shrink: true }} sx={{ width: 140 }} />
+                                                : task.activity_date || <span style={{ color: '#bbb' }}>—</span>}
+                                        </TableCell>
                                         <TableCell>
                                             {editId === task.id
                                                 ? <TextField fullWidth value={editData.name} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} size="small" />

@@ -17,12 +17,14 @@ const TaskDialog = ({ open, onClose, onSave, subCriteria = [], specialCriteria =
     const [name, setName] = useState('');
     const [weight, setWeight] = useState(1);
     const [selectedSub, setSelectedSub] = useState(initialSubCriterion);
+    const [activityDate, setActivityDate] = useState('');
 
     useEffect(() => {
         if (open) {
             setSelectedSub(initialSubCriterion);
             setName('');
             setWeight(1);
+            setActivityDate('');
         }
     }, [open, initialSubCriterion]);
 
@@ -44,7 +46,7 @@ const TaskDialog = ({ open, onClose, onSave, subCriteria = [], specialCriteria =
             if (!finalName) finalName = "Nueva Tarea";
         }
 
-        onSave({ name: finalName, weight: parseInt(weight) || 1, subCriterionId: selectedSub });
+        onSave({ name: finalName, weight: parseInt(weight) || 1, subCriterionId: selectedSub, activityDate: activityDate || null });
     };
 
     const showSubSelect = subCriteria.length > 0 || specialCriteria.length > 0;
@@ -98,6 +100,17 @@ const TaskDialog = ({ open, onClose, onSave, subCriteria = [], specialCriteria =
                             onChange={(e) => setWeight(e.target.value)}
                             variant="outlined"
                             inputProps={{ min: 1 }}
+                        />
+                    </Grid>
+                    <Grid size={12}>
+                        <TextField
+                            fullWidth
+                            type="date"
+                            label="Fecha de la Actividad (Opcional)"
+                            value={activityDate}
+                            onChange={(e) => setActivityDate(e.target.value)}
+                            variant="outlined"
+                            InputLabelProps={{ shrink: true }}
                         />
                     </Grid>
                 </Grid>
