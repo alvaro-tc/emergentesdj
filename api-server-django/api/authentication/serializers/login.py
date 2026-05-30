@@ -95,12 +95,13 @@ class LoginSerializer(serializers.Serializer):
             "token": session.token,
             "requires_account_update": (user.role == 'STUDENT' and user.ci_number == password),
             "user": {
-                "_id": user.pk, 
-                "email": user.email, 
+                "_id": user.pk,
+                "email": user.email,
                 "first_name": user.first_name,
                 "paternal_surname": user.paternal_surname,
                 "maternal_surname": user.maternal_surname,
                 "ci_number": user.ci_number,
+                "phone": user.phone,
                 "role": user.role,
                 "active_course": user.active_course.id if user.active_course else None
             },

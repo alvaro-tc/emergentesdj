@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Autocomplete } from '@mui/material'; // Standard Material UI Autocomplete
 import MainCard from '../../../ui-component/cards/MainCard';
-import { IconTrash, IconUserPlus, IconUpload, IconUsers, IconPencil, IconSearch, IconDownload } from '@tabler/icons-react';
+import { IconTrash, IconUserPlus, IconUpload, IconUsers, IconPencil, IconSearch, IconDownload, IconBrandWhatsapp } from '@tabler/icons-react';
 import { Chip, CircularProgress as MuiCircularProgress } from '@mui/material';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
@@ -58,11 +58,19 @@ const Enrollments = () => {
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
+    // Export
+    const [exportLoading, setExportLoading] = useState(false);
+
     // Edit student dialog
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editStudent, setEditStudent] = useState(null);
     const [editLoading, setEditLoading] = useState(false);
-    const [editForm, setEditForm] = useState({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '' });
+    const [editForm, setEditForm] = useState({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
+
+    // WhatsApp dialog
+    const [waDialogOpen, setWaDialogOpen] = useState(false);
+    const [waStudent, setWaStudent] = useState(null);
+    const [waMessage, setWaMessage] = useState('');
 
     const fetchPendingRequests = () => {
         if (!activeCourse) return;
@@ -192,9 +200,25 @@ const Enrollments = () => {
             first_name: s.first_name || '',
             paternal_surname: s.paternal_surname || '',
             maternal_surname: s.maternal_surname || '',
-            email: s.email || ''
+            email: s.email || '',
+            phone: s.phone || ''
         });
         setEditDialogOpen(true);
+    };
+
+    const handleOpenWhatsApp = (student) => {
+        setWaStudent(student);
+        setWaMessage('');
+        setWaDialogOpen(true);
+    };
+
+    const handleSendWhatsApp = () => {
+        if (!waStudent?.phone) return;
+        const clean = waStudent.phone.replace(/\D/g, '');
+        const number = clean.length === 8 ? `591${clean}` : clean;
+        const url = `https://wa.me/${number}${waMessage ? `?text=${encodeURIComponent(waMessage)}` : ''}`;
+        window.open(url, '_blank');
+        setWaDialogOpen(false);
     };
 
     const handleSaveEdit = () => {
@@ -344,6 +368,34 @@ const Enrollments = () => {
         }).finally(() => setBulkDeleteLoading(false));
     };
 
+    const handleExportExcel = () => {
+        if (!activeCourse) return;
+        setExportLoading(true);
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        axios.get(`${configData.API_SERVER}enrollments/`, {
+            params: { course: activeCourse.id, page_size: 10000 }
+        })
+            .then(response => {
+                const rows = (response.data.results || response.data).map(en => ({
+                    Sigla: activeCourse.subject_details?.code || '',
+                    CI: en.student_details?.ci_number || '',
+                    Paterno: en.student_details?.paternal_surname || '',
+                    Materno: en.student_details?.maternal_surname || '',
+                    Nombres: en.student_details?.first_name || '',
+                    Correo: en.student_details?.email || '',
+                    Celular: en.student_details?.phone || ''
+                }));
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
+                const sigla = activeCourse.subject_details?.code || 'curso';
+                const parallel = activeCourse.parallel || '';
+                XLSX.writeFile(wb, `inscritos_${sigla}_${parallel}.xlsx`);
+            })
+            .catch(() => setSnackbar({ open: true, message: 'Error al exportar estudiantes', severity: 'error' }))
+            .finally(() => setExportLoading(false));
+    };
+
     const handleDownloadTemplate = () => {
         const data = [
             { CI: '12345678', Paterno: 'Gomez', Materno: 'Lopez', Nombre: 'Juan', Email: 'juan@example.com', Celular: '70000001' },
@@ -410,6 +462,19 @@ const Enrollments = () => {
                         </Button>
                     </Tooltip>
                 </Grid>
+                <Grid>
+                    <Tooltip title="Exportar lista de inscritos a Excel">
+                        <Button
+                            variant="outlined"
+                            color="success"
+                            startIcon={exportLoading ? <MuiCircularProgress size={16} /> : <IconDownload />}
+                            onClick={handleExportExcel}
+                            disabled={exportLoading || totalCount === 0}
+                        >
+                            {exportLoading ? 'Exportando...' : 'Exportar Excel'}
+                        </Button>
+                    </Tooltip>
+                </Grid>
                 {selectedIds.size > 0 && (
                     <Grid>
                         <Button
@@ -469,6 +534,7 @@ const Enrollments = () => {
                             <TableCell>Materno</TableCell>
                             <TableCell>Nombre</TableCell>
                             <TableCell>Email</TableCell>
+                            <TableCell>Celular</TableCell>
                             <TableCell align="right">Fecha Inscripción</TableCell>
                             <TableCell align="center">Acciones</TableCell>
                         </TableRow>
@@ -476,7 +542,7 @@ const Enrollments = () => {
                     <TableBody>
                         {enrollments.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={10} align="center">
                                     No se encontraron estudiantes{searchDebounced ? ` para "${searchDebounced}"` : ''}.
                                 </TableCell>
                             </TableRow>
@@ -504,6 +570,24 @@ const Enrollments = () => {
                                     <TableCell>{enrollment.student_details?.maternal_surname}</TableCell>
                                     <TableCell>{enrollment.student_details?.first_name}</TableCell>
                                     <TableCell>{enrollment.student_details?.email}</TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                                {enrollment.student_details?.phone || '—'}
+                                            </Typography>
+                                            {enrollment.student_details?.phone && (
+                                                <Tooltip title="Enviar mensaje por WhatsApp">
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: '#25D366', p: 0.3 }}
+                                                        onClick={() => handleOpenWhatsApp(enrollment.student_details)}
+                                                    >
+                                                        <IconBrandWhatsapp size="1.1rem" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                        </Box>
+                                    </TableCell>
                                     <TableCell align="right">{enrollment.date_enrolled}</TableCell>
                                     <TableCell align="center">
                                         <IconButton color="primary" size="small" onClick={() => handleOpenEdit(enrollment)} title="Editar estudiante">
@@ -844,7 +928,11 @@ const Enrollments = () => {
                                 fullWidth
                             />
                         </Grid>
-                        <Grid size={12}>
+                        <Grid
+                            size={{
+                                xs: 12,
+                                sm: 6
+                            }}>
                             <TextField
                                 label="Email"
                                 type="email"
@@ -852,6 +940,21 @@ const Enrollments = () => {
                                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                                 variant="outlined"
                                 fullWidth
+                            />
+                        </Grid>
+                        <Grid
+                            size={{
+                                xs: 12,
+                                sm: 6
+                            }}>
+                            <TextField
+                                label="Celular"
+                                type="tel"
+                                value={editForm.phone}
+                                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Ej: 70000000"
                             />
                         </Grid>
                     </Grid>
@@ -862,6 +965,44 @@ const Enrollments = () => {
                     </Button>
                     <Button onClick={handleSaveEdit} color="secondary" variant="contained" disabled={editLoading}>
                         {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            {/* WHATSAPP DIALOG */}
+            <Dialog open={waDialogOpen} onClose={() => setWaDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconBrandWhatsapp size="1.3rem" style={{ color: '#25D366' }} />
+                    Enviar mensaje por WhatsApp
+                </DialogTitle>
+                <DialogContent>
+                    {waStudent && (
+                        <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                            Para: <strong>{waStudent.paternal_surname} {waStudent.maternal_surname} {waStudent.first_name}</strong>
+                            {' '}· {waStudent.phone}
+                        </Typography>
+                    )}
+                    <TextField
+                        label="Mensaje (opcional)"
+                        multiline
+                        rows={3}
+                        fullWidth
+                        variant="outlined"
+                        value={waMessage}
+                        onChange={(e) => setWaMessage(e.target.value)}
+                        placeholder="Escribe un mensaje o deja vacío para abrir el chat directo"
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setWaDialogOpen(false)} color="primary">
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleSendWhatsApp}
+                        variant="contained"
+                        sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1ebe5d' } }}
+                        startIcon={<IconBrandWhatsapp size="1rem" />}
+                    >
+                        Abrir WhatsApp
                     </Button>
                 </DialogActions>
             </Dialog>

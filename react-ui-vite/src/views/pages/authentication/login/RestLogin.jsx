@@ -54,10 +54,11 @@ const RestLogin = ({ login, ...others }) => {
     // Force Update State
     const [forceUpdateOpen, setForceUpdateOpen] = React.useState(false);
     const [tempToken, setTempToken] = React.useState(null);
-    const [updateData, setUpdateData] = React.useState({ email: '', password: '', confirmPassword: '' });
-    const [updateError, setUpdateError] = React.useState('');
+    const [updateData, setUpdateData] = React.useState({ email: '', password: '', confirmPassword: '', phone: '' });
+    const [updateError, setUpdateError] = React.useState(null);
     const [updating, setUpdating] = React.useState(false);
     const [existingEmail, setExistingEmail] = React.useState(null);
+    const [existingPhone, setExistingPhone] = React.useState(null);
 
     const handleClickShowPassword = () => setShowPassword(!showPassword);
     const handleMouseDownPassword = (event) => event.preventDefault();
@@ -67,25 +68,28 @@ const RestLogin = ({ login, ...others }) => {
     };
 
     const handleUpdateSubmit = async () => {
-        setUpdateError('');
-        if (!updateData.email || !updateData.password || !updateData.confirmPassword) {
-            setUpdateError('Todos los campos son obligatorios');
+        setUpdateError(null);
+        if (!updateData.password || !updateData.confirmPassword) {
+            setUpdateError('La nueva contraseña es obligatoria');
             return;
         }
         if (updateData.password !== updateData.confirmPassword) {
             setUpdateError('Las contraseñas no coinciden');
             return;
         }
-        if (updateData.password.length < 6) {
-            setUpdateError('La contraseña debe tener al menos 6 caracteres');
+        if (!existingPhone && !updateData.phone) {
+            setUpdateError('El número de celular es obligatorio');
             return;
         }
 
         setUpdating(true);
         try {
+            const payload = { email: updateData.email, password: updateData.password };
+            if (!existingPhone && updateData.phone) payload.phone = updateData.phone;
+
             const response = await axios.post(
                 configData.API_SERVER + 'manage-users/update-credentials/',
-                { email: updateData.email, password: updateData.password },
+                payload,
                 { headers: { Authorization: `Bearer ${tempToken}` } }
             );
 
@@ -97,7 +101,14 @@ const RestLogin = ({ login, ...others }) => {
             }
         } catch (error) {
             console.error(error);
-            setUpdateError(error.response?.data?.msg || JSON.stringify(error.response?.data) || 'Error de conexión');
+            const errData = error.response?.data;
+            if (errData?.msg) {
+                setUpdateError(errData.msg);
+            } else if (errData && typeof errData === 'object') {
+                setUpdateError(errData);
+            } else {
+                setUpdateError('Error de conexión');
+            }
         } finally {
             setUpdating(false);
         }
@@ -128,11 +139,13 @@ const RestLogin = ({ login, ...others }) => {
                                     if (response.data.requires_account_update) {
                                         setTempToken(response.data.token);
                                         const userEmail = response.data.user?.email;
+                                        const userPhone = response.data.user?.phone;
                                         const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
                                         if (userEmail && isValidEmail(userEmail)) {
                                             setExistingEmail(userEmail);
                                             setUpdateData(prev => ({ ...prev, email: userEmail }));
                                         }
+                                        setExistingPhone(userPhone || null);
                                         setForceUpdateOpen(true);
                                         setSubmitting(false);
                                     } else {
@@ -273,8 +286,20 @@ const RestLogin = ({ login, ...others }) => {
                         }
                     </DialogContentText>
                     {updateError && (
-                        <Box sx={{ mb: 2 }}>
-                            <Typography color="error">{updateError}</Typography>
+                        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'error.lighter', borderRadius: 1, border: '1px solid', borderColor: 'error.light' }}>
+                            {typeof updateError === 'string' ? (
+                                <Typography color="error" variant="body2">{updateError}</Typography>
+                            ) : (
+                                Object.entries(updateError).map(([field, msgs]) => {
+                                    const text = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+                                    const label = field === 'non_field_errors' ? '' : `${field}: `;
+                                    return (
+                                        <Typography key={field} color="error" variant="body2">
+                                            {label}{text}
+                                        </Typography>
+                                    );
+                                })
+                            )}
                         </Box>
                     )}
                     {!existingEmail && (
@@ -314,7 +339,22 @@ const RestLogin = ({ login, ...others }) => {
                         name="confirmPassword"
                         value={updateData.confirmPassword}
                         onChange={handleUpdateChange}
+                        sx={{ mb: 2 }}
                     />
+                    {!existingPhone && (
+                        <TextField
+                            margin="dense"
+                            id="new-phone"
+                            label="Número de Celular"
+                            type="tel"
+                            fullWidth
+                            variant="outlined"
+                            name="phone"
+                            value={updateData.phone}
+                            onChange={handleUpdateChange}
+                            placeholder="Ej: 70000000"
+                        />
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleUpdateSubmit} color="primary" variant="contained" disabled={updating}>

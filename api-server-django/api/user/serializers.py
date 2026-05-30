@@ -98,13 +98,19 @@ class UserCredentialsUpdateSerializer(serializers.Serializer):
         }
     )
     password = serializers.CharField(
-        write_only=True, 
-        required=True, 
+        write_only=True,
+        required=True,
         min_length=8,
         error_messages={
             'required': 'Este campo es obligatorio.',
             'min_length': 'La contraseña debe tener al menos 8 caracteres.'
         }
+    )
+    phone = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        max_length=20
     )
 
     def _is_valid_email(self, value):
@@ -137,6 +143,9 @@ class UserCredentialsUpdateSerializer(serializers.Serializer):
         if email:
             instance.email = email
         instance.set_password(validated_data['password'])
+        phone = validated_data.get('phone')
+        if phone:
+            instance.phone = phone
         instance.save()
         return instance
 
