@@ -26,8 +26,10 @@ const AuthLogin3    = Loadable(lazy(() => import('../views/pages/authentication/
 const AuthRegister3 = Loadable(lazy(() => import('../views/pages/authentication/authentication3/Register3')));
 
 // ── Login / Register (guest guard) ───────────────────────────────────────────
-const AuthLogin    = Loadable(lazy(() => import('../views/pages/authentication/login')));
-const AuthRegister = Loadable(lazy(() => import('../views/pages/authentication/register')));
+const AuthLogin        = Loadable(lazy(() => import('../views/pages/authentication/login')));
+const AuthRegister     = Loadable(lazy(() => import('../views/pages/authentication/register')));
+const ForgotPassword   = Loadable(lazy(() => import('../views/pages/authentication/forgot-password')));
+const ResetPassword    = Loadable(lazy(() => import('../views/pages/authentication/reset-password')));
 
 // ── Protected pages ───────────────────────────────────────────────────────────
 const DashboardDefault  = Loadable(lazy(() => import('../views/dashboard/Default')));
@@ -108,6 +110,15 @@ const Routes = () =>
             children: [
                 { path: '/login',    element: <AuthLogin /> },
                 { path: '/register', element: <AuthRegister /> },
+                { path: '/forgot-password', element: <ForgotPassword /> },
+            ],
+        },
+
+        // ── Password reset (no guard — token already protects it) ─────────────
+        {
+            element: <MinimalLayout><NavMotion><Outlet /></NavMotion></MinimalLayout>,
+            children: [
+                { path: '/reset-password/:uid/:token', element: <ResetPassword /> },
             ],
         },
 

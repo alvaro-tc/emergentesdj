@@ -242,7 +242,7 @@ const RestLogin = ({ login, ...others }) => {
                             <Typography
                                 variant="subtitle1"
                                 component={Link}
-                                to={login ? '/pages/forgot-password/forgot-password' + login : '#'}
+                                to="/forgot-password"
                                 color="secondary"
                                 sx={{ textDecoration: 'none' }}
                             >

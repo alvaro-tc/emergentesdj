@@ -45,7 +45,10 @@
       "Bash(grep -oP \"API_SERVER \\\\+ ['\\\\\"\\\\`][^'\\\\\"\\\\`]*\")",
       "Bash(grep -oP \"\\\\`\\\\$\\\\{configData\\\\.API_SERVER\\\\}[^'\\\\\"\\\\`]*\")",
       "Bash(grep -oE \"\\(get|post|put|patch|delete\\)\\\\\\(['\\\\`][^\\\\\\)]*\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx playwright *)",
+      "Bash(npx --yes playwright install chromium)",
+      "Bash(sudo apt-get install -y libnspr4 libnss3)"
     ]
   },
   "enabledPlugins": {
