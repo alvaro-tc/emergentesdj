@@ -66,7 +66,7 @@ const Login = () => {
                                         <Grid container direction="column" alignItems="center" size={12}>
                                             <Typography
                                                 component={RouterLink}
-                                                to="/register"
+                                                to="/"
                                                 variant="subtitle1"
                                                 sx={{ textDecoration: 'none' }}
                                             >
