@@ -36,10 +36,11 @@ router.register(r"sub-evaluations", school_views.SubEvaluationViewSet, basename=
 from api.publications.views import PublicationViewSet
 router.register(r"publications", PublicationViewSet, basename="publications")
 
-# Web Config (Social Media)
-from api.web_config.views import SocialMediaViewSet, LandingPageConfigViewSet
+# Web Config (Social Media & Contact)
+from api.web_config.views import SocialMediaViewSet, LandingPageConfigViewSet, ContactMessageViewSet
 router.register(r"web-config", SocialMediaViewSet, basename="web-config")
 router.register(r"landing-page-config", LandingPageConfigViewSet, basename="landing-page-config")
+router.register(r"contact-messages", ContactMessageViewSet, basename="contact-messages")
 
 router.register(r"scores", school_views.ScoreViewSet, basename="scores")
 router.register(r"reports", school_views.ReportViewSet, basename="reports")

@@ -1,4 +1,4 @@
-import { IconHistory, IconCertificate, IconBook, IconLayoutGrid, IconBriefcase, IconUserCheck, IconList, IconShieldCheck } from '@tabler/icons-react';
+import { IconHistory, IconCertificate, IconBook, IconLayoutGrid, IconBriefcase, IconUserCheck, IconList, IconShieldCheck, IconMailbox } from '@tabler/icons-react';
 
 const icons = {
     IconHistory,
@@ -8,7 +8,8 @@ const icons = {
     IconBriefcase,
     IconUserCheck,
     IconList,
-    IconShieldCheck
+    IconShieldCheck,
+    IconMailbox,
 };
 
 export const administration = {
@@ -79,6 +80,14 @@ export const administration = {
             url: '/admin/audit-log',
             icon: icons.IconShieldCheck,
             breadcrumbs: false
+        },
+        {
+            id: 'messages',
+            title: 'Mensajes',
+            type: 'item',
+            url: '/dashboard/messages',
+            icon: icons.IconMailbox,
+            breadcrumbs: false,
         }
     ]
 };

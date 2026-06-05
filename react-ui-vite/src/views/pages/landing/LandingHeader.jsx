@@ -11,7 +11,8 @@ const NAV_LINKS = [
     { label: 'Acerca de', to: '/about' },
     { label: 'Blog', to: '/blog' },
     { label: 'Publicaciones', to: '/publications' },
-    { label: 'Actividades', to: '/project-registration' },
+    { label: 'Contacto', to: '/contact' },
+    // { label: 'Actividades', to: '/project-registration' },
 ];
 
 const LandingHeader = ({ isDark, onToggleTheme }) => {

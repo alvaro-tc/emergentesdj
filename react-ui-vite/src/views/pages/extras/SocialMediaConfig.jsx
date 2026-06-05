@@ -12,7 +12,7 @@ import {
     CircularProgress,
     Box
 } from '@mui/material';
-import { IconBrandFacebook, IconBrandYoutube, IconBrandTiktok, IconBrandInstagram, IconDeviceFloppy } from '@tabler/icons-react';
+import { IconBrandFacebook, IconBrandYoutube, IconBrandTiktok, IconBrandInstagram, IconBrandWhatsapp, IconDeviceFloppy } from '@tabler/icons-react';
 import axios from 'axios';
 import configData from '../../../config';
 import MainCard from '../../../ui-component/cards/MainCard';
@@ -23,7 +23,8 @@ const SocialMediaConfig = () => {
         facebook: '',
         youtube: '',
         tiktok: '',
-        instagram: ''
+        instagram: '',
+        whatsapp: '',
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -41,7 +42,8 @@ const SocialMediaConfig = () => {
                     facebook: response.data.facebook || '',
                     youtube: response.data.youtube || '',
                     tiktok: response.data.tiktok || '',
-                    instagram: response.data.instagram || ''
+                    instagram: response.data.instagram || '',
+                    whatsapp: response.data.whatsapp || '',
                 });
             }
         } catch (error) {
@@ -185,6 +187,29 @@ const SocialMediaConfig = () => {
                                         startAdornment: (
                                             <InputAdornment position="start">
                                                 <IconBrandInstagram stroke={1.5} size="1.3rem" color="#E4405F" />
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                />
+                            </Grid>
+                            <Grid
+                                size={{
+                                    xs: 12,
+                                    md: 6
+                                }}>
+                                <TextField
+                                    fullWidth
+                                    label="Número de WhatsApp"
+                                    name="whatsapp"
+                                    value={socialLinks.whatsapp}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    placeholder="59112345678 (sin + ni espacios)"
+                                    helperText="Solo el número con código de país, ej: 59112345678"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <IconBrandWhatsapp stroke={1.5} size="1.3rem" color="#25D366" />
                                             </InputAdornment>
                                         )
                                     }}

@@ -20,6 +20,7 @@ const PublicBlog                 = Loadable(lazy(() => import('../views/pages/la
 const PublicBlogPost             = Loadable(lazy(() => import('../views/pages/landing/PublicBlogPost')));
 const StudentCourseRegistration  = Loadable(lazy(() => import('../views/pages/school/StudentCourseRegistration')));
 const StudentProjectRegistration = Loadable(lazy(() => import('../views/pages/school/StudentProjectRegistration')));
+const ContactPage                = Loadable(lazy(() => import('../views/pages/landing/ContactPage')));
 
 // ── Auth pages (no guard) ─────────────────────────────────────────────────────
 const AuthLogin3    = Loadable(lazy(() => import('../views/pages/authentication/authentication3/Login3')));
@@ -62,6 +63,7 @@ const Presentations          = Loadable(lazy(() => import('../views/pages/school
 const PresentationForm       = Loadable(lazy(() => import('../views/pages/school/PresentationForm')));
 const PresentationViewer     = Loadable(lazy(() => import('../views/pages/school/PresentationViewer')));
 const AuditLogPanel          = Loadable(lazy(() => import('../views/pages/audit/AuditLogPanel')));
+const Messages               = Loadable(lazy(() => import('../views/pages/extras/Messages')));
 
 // Layout wrappers
 const ProtectedLayout = () => (
@@ -97,6 +99,7 @@ const Routes = () =>
                 { path: '/blog/:slug',    element: <PublicBlogPost /> },
                 { path: '/extras/course-registration', element: <StudentCourseRegistration /> },
                 { path: '/project-registration',       element: <StudentProjectRegistration /> },
+                { path: '/contact',                    element: <ContactPage /> },
             ],
         },
 
@@ -161,6 +164,7 @@ const Routes = () =>
                     { path: '/dashboard/presentations/new',      element: <PresentationForm /> },
                     { path: '/dashboard/presentations/:id/edit', element: <PresentationForm /> },
                     { path: '/admin/audit-log',                  element: <AuditLogPanel /> },
+                    { path: '/dashboard/messages',               element: <Messages /> },
                 ],
             }],
         },

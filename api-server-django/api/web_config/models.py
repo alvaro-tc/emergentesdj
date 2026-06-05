@@ -5,6 +5,7 @@ class SocialMediaLink(models.Model):
     youtube = models.URLField(max_length=255, blank=True, null=True)
     tiktok = models.URLField(max_length=255, blank=True, null=True)
     instagram = models.URLField(max_length=255, blank=True, null=True)
+    whatsapp = models.CharField(max_length=20, blank=True, null=True, help_text='Número de WhatsApp (ej: 59112345678)')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -39,3 +40,33 @@ class LandingPageConfig(models.Model):
     class Meta:
         verbose_name = "Landing Page Configuration"
         verbose_name_plural = "Landing Page Configuration"
+
+
+class ContactMessage(models.Model):
+    STATUS_UNREAD = 'unread'
+    STATUS_READ = 'read'
+    STATUS_REPLIED = 'replied'
+
+    STATUS_CHOICES = [
+        (STATUS_UNREAD, 'No leído'),
+        (STATUS_READ, 'Leído'),
+        (STATUS_REPLIED, 'Respondido'),
+    ]
+
+    nombre: str = models.CharField(max_length=100)
+    apellidos: str = models.CharField(max_length=100)
+    celular: str = models.CharField(max_length=20, blank=True)
+    email: str = models.EmailField()
+    asunto: str = models.CharField(max_length=200)
+    mensaje: str = models.TextField()
+    status: str = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_UNREAD)
+    created_at = models.DateTimeField(auto_now_add=True)
+    replied_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Mensaje de Contacto'
+        verbose_name_plural = 'Mensajes de Contacto'
+
+    def __str__(self) -> str:
+        return f"{self.nombre} {self.apellidos} - {self.asunto}"

@@ -75,11 +75,50 @@ const StudentAcademicMenu = () => {
     return <NavGroup key="academic" item={academicGroup} />;
 };
 
+// Injects dynamic unread count chip into the "messages" menu item
+const useUnreadCount = (token) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        if (!token) return;
+        let cancelled = false;
+        const fetch = async () => {
+            try {
+                const { data } = await axios.get(`${configData.API_SERVER}contact-messages/unread-count/`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!cancelled) setCount(data.count ?? 0);
+            } catch { /* silently ignore */ }
+        };
+        fetch();
+        const interval = setInterval(fetch, 60000); // refresh every minute
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [token]);
+
+    return count;
+};
+
 //-----------------------|| SIDEBAR MENU LIST ||-----------------------//
 
 const MenuList = () => {
     const account = useSelector(selectAccount);
     const userRole = useSelector(selectUserRole);
+    const unreadCount = useUnreadCount(account.token);
+
+    // Inject unread chip into administration group's "messages" item
+    const enrichedItems = menuItem.items.map((group) => {
+        if (group.id !== 'administration') return group;
+        return {
+            ...group,
+            children: group.children.map((item) => {
+                if (item.id !== 'messages' || unreadCount === 0) return item;
+                return {
+                    ...item,
+                    chip: { color: 'error', variant: 'filled', size: 'small', label: String(unreadCount) },
+                };
+            }),
+        };
+    });
 
     if (userRole === 'STUDENT') {
         const dashboardItem = menuItem.items.find((item) => item.id === 'dashboard');
@@ -99,7 +138,7 @@ const MenuList = () => {
         return teacherItems.map((item) => <NavGroup key={item.id} item={item} />);
     }
 
-    return menuItem.items.map((item) => {
+    return enrichedItems.map((item) => {
         switch (item.type) {
             case 'group':
                 return <NavGroup key={item.id} item={item} />;
