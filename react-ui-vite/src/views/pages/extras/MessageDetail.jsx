@@ -4,6 +4,7 @@ import {
     Stack, IconButton, CircularProgress, Alert,
 } from '@mui/material';
 import { IconTrash, IconSend, IconX, IconMail, IconPhone, IconClock } from '@tabler/icons-react';
+import WhatsAppModal from './WhatsAppModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import axios from 'axios';
@@ -17,6 +18,7 @@ const MessageDetail = ({ message, token, onDeleted, onReplied }) => {
     const [sending, setSending] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+    const [whatsappOpen, setWhatsappOpen] = useState(false);
 
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -75,7 +77,14 @@ const MessageDetail = ({ message, token, onDeleted, onReplied }) => {
                 {message.celular && (
                     <Stack direction="row" spacing={0.75} alignItems="center">
                         <IconPhone size={14} color="gray" />
-                        <Typography variant="caption" color="textSecondary">{message.celular}</Typography>
+                        <Typography
+                            variant="caption"
+                            color="primary"
+                            onClick={() => setWhatsappOpen(true)}
+                            sx={{ cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#25D366' } }}
+                        >
+                            {message.celular}
+                        </Typography>
                     </Stack>
                 )}
                 <Stack direction="row" spacing={0.75} alignItems="center">
@@ -121,6 +130,15 @@ const MessageDetail = ({ message, token, onDeleted, onReplied }) => {
             >
                 {sending ? 'Enviando...' : 'Enviar Respuesta'}
             </Button>
+
+            {message.celular && (
+                <WhatsAppModal
+                    open={whatsappOpen}
+                    onClose={() => setWhatsappOpen(false)}
+                    phone={message.celular}
+                    contactName={message.full_name}
+                />
+            )}
         </Box>
     );
 };
