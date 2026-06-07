@@ -31,6 +31,7 @@ const ManageProjectDialog = ({
 }) => {
     const [formData, setFormData] = useState({
         name: '',
+        title: '',
         description: '',
         score: '',
         observations: '',
@@ -59,6 +60,7 @@ const ManageProjectDialog = ({
         if (project && open) {
             setFormData({
                 name: project.name || '',
+                title: project.title || '',
                 description: project.description || '',
                 score: project.score !== null ? project.score : '',
                 observations: project.observations || '',
@@ -137,12 +139,24 @@ const ManageProjectDialog = ({
                         <SectionHeader icon={IconNotes} title="Información del Proyecto" />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 8 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             fullWidth
-                            label="Nombre del Proyecto"
+                            label="Nombre del Grupo"
                             name="name"
                             value={formData.name}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            size="small"
+                        />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <TextField
+                            fullWidth
+                            label="Título del Proyecto"
+                            name="title"
+                            value={formData.title}
                             onChange={handleInputChange}
                             variant="outlined"
                             size="small"

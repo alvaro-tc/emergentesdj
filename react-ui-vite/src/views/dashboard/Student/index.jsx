@@ -117,7 +117,7 @@ const CourseCard = ({ course, index, onInfo, onGrades }) => {
                     <Box display="flex" alignItems="center" gap={1}>
                         <PersonOutlineIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
                         <Typography variant="body2" color="text.secondary" noWrap title={course.teacher}>
-                            {course.teacher}
+                            {course.teacher ? `Docente: ${course.teacher}` : '—'}
                         </Typography>
                     </Box>
                     <Box display="flex" alignItems="center" gap={1}>

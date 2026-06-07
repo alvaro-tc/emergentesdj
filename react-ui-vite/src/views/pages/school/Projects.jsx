@@ -93,6 +93,7 @@ const Projects = () => {
     // Create Form Data
     const [createFormData, setCreateFormData] = useState({
         name: '',
+        title: '',
         description: '',
         sub_criterion: '',
         student_in_charge: '',
@@ -189,6 +190,7 @@ const Projects = () => {
     const handleOpenCreateDialog = () => {
         setCreateFormData({
             name: '',
+            title: '',
             description: '',
             sub_criterion: selectedSubCriterion || '',
             student_in_charge: '',
@@ -532,7 +534,8 @@ const Projects = () => {
                         <TableHead>
                             <TableRow>
                                 <TableCell>Grupo</TableCell>
-                                <TableCell>Nombre del Proyecto</TableCell>
+                                <TableCell>Nombre de Grupo</TableCell>
+                                <TableCell>Proyecto</TableCell>
                                 <TableCell>Miembros</TableCell>
                                 <TableCell>
                                     {selectedSubCriterion ? (
@@ -556,7 +559,10 @@ const Projects = () => {
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="subtitle1" style={{ fontWeight: 'bold' }}>{project.name}</Typography>
-                                        <Typography variant="caption" color="textSecondary">{project.description}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">{project.title || <Typography component="span" variant="caption" color="textSecondary">—</Typography>}</Typography>
+                                        {project.description && <Typography variant="caption" color="textSecondary" display="block">{project.description}</Typography>}
                                     </TableCell>
                                     <TableCell>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -607,7 +613,7 @@ const Projects = () => {
                             ))}
                             {filteredProjects.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                         {selectedSubCriterion
                                             ? 'No hay proyectos para este sub-criterio.'
                                             : 'No hay proyectos para este curso.'}
@@ -634,12 +640,23 @@ const Projects = () => {
                 <DialogContent sx={{ px: 3, py: 2 }}>
                     <Grid container spacing={2.5}>
                         {/* Información */}
-                        <Grid size={{ xs: 12, sm: 8 }} sx={{ mt: 1 }}>
+                        <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 1 }}>
                             <TextField
                                 fullWidth
-                                label="Nombre del Proyecto"
+                                label="Nombre del Grupo"
                                 name="name"
                                 value={createFormData.name}
+                                onChange={handleCreateInputChange}
+                                variant="outlined"
+                                size="small"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 1 }}>
+                            <TextField
+                                fullWidth
+                                label="Título del Proyecto"
+                                name="title"
+                                value={createFormData.title}
                                 onChange={handleCreateInputChange}
                                 variant="outlined"
                                 size="small"

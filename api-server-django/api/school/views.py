@@ -1721,6 +1721,7 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
             leader_ci = request.data.get('leader_ci')
             members_ci = request.data.get('members_ci', [])
             name = request.data.get('name')
+            title = request.data.get('title', '')
             description = request.data.get('description', '')
             sub_criterion_id = request.data.get('sub_criterion_id')
 
@@ -1789,6 +1790,7 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
                 course=sub_crit.course,
                 sub_criterion=sub_crit,
                 name=name,
+                title=title,
                 description=description,
                 student_in_charge=leader_enrollment,
                 group_number=group_number

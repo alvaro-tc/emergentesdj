@@ -218,6 +218,7 @@ class Project(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='projects')
     sub_criterion = models.ForeignKey(CourseSubCriterion, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     student_in_charge = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True, related_name='led_projects')
     members = models.ManyToManyField(Enrollment, related_name='projects')

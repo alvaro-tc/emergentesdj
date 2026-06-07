@@ -189,7 +189,7 @@ const ProfileSection = () => {
                                                     {getWelcomeName(account.user)}
                                                 </Typography>
                                             </Stack>
-                                            <Typography variant="subtitle2">Project Admin</Typography>
+                                            <Typography variant="subtitle2"></Typography>
                                         </Stack>
                                         <OutlinedInput
                                             sx={{ width: '100%', pr: 1, pl: 2, my: 2 }}

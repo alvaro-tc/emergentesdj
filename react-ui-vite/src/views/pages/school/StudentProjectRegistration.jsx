@@ -40,6 +40,7 @@ const StudentProjectRegistration = () => {
 
     // Form Data
     const [projectName, setProjectName] = useState('');
+    const [projectTitle, setProjectTitle] = useState('');
     const [projectDesc, setProjectDesc] = useState('');
 
     const [memberCiInput, setMemberCiInput] = useState('');
@@ -124,6 +125,7 @@ const StudentProjectRegistration = () => {
             leader_ci: selectedLeaderCi,
             members_ci: members.filter(m => m.ci !== selectedLeaderCi).map(m => m.ci),
             name: projectName,
+            title: projectTitle,
             description: projectDesc
         };
 
@@ -147,6 +149,7 @@ const StudentProjectRegistration = () => {
         setMembers([]);
         setSelectedLeaderCi('');
         setProjectName('');
+        setProjectTitle('');
         setProjectDesc('');
         setMemberCiInput('');
     };
@@ -279,6 +282,17 @@ const StudentProjectRegistration = () => {
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Título del Proyecto"
+                                        value={projectTitle}
+                                        onChange={(e) => setProjectTitle(e.target.value)}
+                                        variant="outlined"
+                                        InputLabelProps={{ style: { color: C.textMuted } }}
+                                        sx={inputSx}
+                                    />
+                                </Grid>
+                                <Grid size={12}>
                                     <TextField
                                         fullWidth
                                         label="Descripción (Opcional)"

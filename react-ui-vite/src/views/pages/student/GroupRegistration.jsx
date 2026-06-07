@@ -45,6 +45,7 @@ const GroupRegistration = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
     const [groupName, setGroupName] = useState('');
+    const [groupTitle, setGroupTitle] = useState('');
     const [description, setDescription] = useState('');
     const [members, setMembers] = useState([]);
     const [memberInput, setMemberInput] = useState('');
@@ -77,6 +78,7 @@ const GroupRegistration = () => {
     const openDialog = (proj) => {
         setSelectedProject(proj);
         setGroupName('');
+        setGroupTitle('');
         setDescription('');
         setMemberInput('');
         setMemberError('');
@@ -152,6 +154,7 @@ const GroupRegistration = () => {
                 {
                     sub_criterion_id: selectedProject.id,
                     name: groupName.trim(),
+                    title: groupTitle.trim(),
                     description: description.trim(),
                     leader_ci: leader.ci,
                     members_ci: members.filter((m) => !m.isLeader).map((m) => m.ci),
@@ -314,6 +317,13 @@ const GroupRegistration = () => {
                             onChange={(e) => setGroupName(e.target.value)}
                             fullWidth size="small"
                             inputProps={{ maxLength: 100 }}
+                        />
+                        <TextField
+                            label="Título del proyecto"
+                            value={groupTitle}
+                            onChange={(e) => setGroupTitle(e.target.value)}
+                            fullWidth size="small"
+                            inputProps={{ maxLength: 255 }}
                         />
                         <TextField
                             label="Descripción (opcional)"
