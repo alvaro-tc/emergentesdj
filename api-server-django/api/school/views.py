@@ -449,9 +449,14 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
         Enroll a list of student IDs into a course.
         Also creates new students if provided in 'students_to_create' list.
         Uses bulk operations to handle 200+ students efficiently on low-memory servers.
+
+        Response fields:
+        - enrolled_count: new enrollments created
+        - created_users_count: brand-new User records created
+        - reused_users_count: existing users located by CI and enrolled
+        - skipped: list of {ci, reason} for rows that were not enrolled
         """
         from django.db import transaction
-        import hashlib
 
         student_ids = list(request.data.get('student_ids', []))
         students_to_create = request.data.get('students_to_create', [])
@@ -466,15 +471,15 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
             return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
 
         created_users_count = 0
+        reused_users_count = 0
 
-        # 1. Batch-resolve new students — avoid N individual queries
+        # 1. Batch-resolve students from Excel rows — avoid N individual queries
         if students_to_create:
             cis_to_create = [s.get('ci_number') for s in students_to_create if s.get('ci_number')]
             existing_by_ci = {
                 u.ci_number: u
                 for u in User.objects.filter(ci_number__in=cis_to_create)
             }
-            # Incluir tanto emails reales como CIs usados como email (norma del sistema)
             emails_to_check = [s.get('email') for s in students_to_create if s.get('email')]
             existing_emails = set(
                 User.objects.filter(email__in=emails_to_check + cis_to_create).values_list('email', flat=True)
@@ -487,22 +492,9 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                         continue
 
                     if ci in existing_by_ci:
-                        # CI ya existe: actualizar los datos del usuario desde el Excel
-                        existing_user = existing_by_ci[ci]
-                        update_fields = []
-                        for field in ('first_name', 'paternal_surname', 'maternal_surname', 'phone'):
-                            val = (s_data.get(field) or '').strip()
-                            if val and getattr(existing_user, field, '') != val:
-                                setattr(existing_user, field, val)
-                                update_fields.append(field)
-                        new_email = (s_data.get('email') or '').strip()
-                        if new_email and new_email != existing_user.email and new_email not in existing_emails:
-                            existing_user.email = new_email
-                            existing_emails.add(new_email)
-                            update_fields.append('email')
-                        if update_fields:
-                            existing_user.save(update_fields=update_fields)
-                        student_ids.append(existing_user.id)
+                        # CI already exists: reuse the existing user, do NOT overwrite their data
+                        student_ids.append(existing_by_ci[ci].id)
+                        reused_users_count += 1
                         continue
 
                     try:
@@ -531,18 +523,31 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
         # 2. Bulk enroll — single INSERT with ignore_conflicts instead of N get_or_create calls
         student_ids = list(set(student_ids))
         enrolled_count = 0
+        skipped: list[dict] = []
 
         if student_ids:
-            # Single query to find which students are already enrolled
+            # Single query to find which students are already enrolled in this course
             already_enrolled_ids = set(
                 models.Enrollment.objects.filter(
                     course=course, student_id__in=student_ids
                 ).values_list('student_id', flat=True)
             )
+
+            # Build skipped report for already-enrolled students
+            if already_enrolled_ids:
+                already_enrolled_users = User.objects.filter(
+                    id__in=already_enrolled_ids
+                ).only('id', 'ci_number', 'first_name', 'paternal_surname')
+                for u in already_enrolled_users:
+                    skipped.append({
+                        'ci': u.ci_number,
+                        'name': f"{u.first_name or ''} {u.paternal_surname or ''}".strip(),
+                        'reason': 'Ya inscrito en esta materia',
+                    })
+
             new_ids = [sid for sid in student_ids if sid not in already_enrolled_ids]
 
             if new_ids:
-                # Single query to validate student IDs exist
                 valid_students = User.objects.filter(id__in=new_ids).only('id')
                 enrollments_to_create = [
                     models.Enrollment(student=s, course=course)
@@ -556,7 +561,9 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
         return Response({
             "status": "success",
             "enrolled_count": enrolled_count,
-            "created_users_count": created_users_count
+            "created_users_count": created_users_count,
+            "reused_users_count": reused_users_count,
+            "skipped": skipped,
         }, status=status.HTTP_200_OK)
 
 class FamilyRelationshipViewSet(viewsets.ModelViewSet):

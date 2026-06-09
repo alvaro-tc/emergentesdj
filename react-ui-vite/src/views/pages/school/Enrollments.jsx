@@ -45,6 +45,8 @@ const Enrollments = () => {
     const [enrollTab, setEnrollTab] = useState(0); // 0 = search existing, 1 = new
     const [newStudentForm, setNewStudentForm] = useState({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
     const [enrollNewLoading, setEnrollNewLoading] = useState(false);
+    const [ciLookupStatus, setCiLookupStatus] = useState(null); // null | 'searching' | 'found' | 'new'
+    const [ciLookupUser, setCiLookupUser] = useState(null);
 
     // Table search + pagination
     const [tableSearch, setTableSearch] = useState('');
@@ -288,12 +290,16 @@ const Enrollments = () => {
             students_to_create: studentsToCreate
         })
             .then(response => {
-                const { enrolled_count, created_users_count } = response.data;
-                setSnackbar({
-                    open: true,
-                    message: `Proceso finalizado. Creados: ${created_users_count || 0}. Inscritos: ${enrolled_count}`,
-                    severity: 'success'
-                });
+                const { enrolled_count, created_users_count, reused_users_count, skipped } = response.data;
+                const parts = [
+                    `Inscritos: ${enrolled_count}`,
+                    `Nuevos usuarios: ${created_users_count || 0}`,
+                    `Reutilizados: ${reused_users_count || 0}`,
+                ];
+                if (skipped && skipped.length > 0) {
+                    parts.push(`Omitidos (ya inscritos): ${skipped.length}`);
+                }
+                setSnackbar({ open: true, message: `Proceso finalizado. ${parts.join('. ')}.`, severity: 'success' });
                 setPreviewOpen(false);
                 fetchEnrollments();
             })
@@ -342,6 +348,37 @@ const Enrollments = () => {
             .catch(err => {
                 console.error(err);
                 setSnackbar({ open: true, message: 'Error al buscar estudiante', severity: 'error' });
+            });
+    };
+
+    const handleCiBlur = () => {
+        const ci = (newStudentForm.ci_number || '').trim().replace(/\D/g, '');
+        if (!ci) return;
+        setCiLookupStatus('searching');
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        axios.get(`${configData.API_SERVER}manage-users/?role=STUDENT&search=${ci}`)
+            .then(response => {
+                const results = response.data.results || response.data;
+                const found = results.find(s => s.ci_number === ci);
+                if (found) {
+                    setCiLookupUser(found);
+                    setCiLookupStatus('found');
+                    setNewStudentForm(prev => ({
+                        ...prev,
+                        first_name: found.first_name || prev.first_name,
+                        paternal_surname: found.paternal_surname || prev.paternal_surname,
+                        maternal_surname: found.maternal_surname || prev.maternal_surname,
+                        email: found.email || prev.email,
+                        phone: found.phone || prev.phone,
+                    }));
+                } else {
+                    setCiLookupUser(null);
+                    setCiLookupStatus('new');
+                }
+            })
+            .catch(() => {
+                setCiLookupUser(null);
+                setCiLookupStatus(null);
             });
     };
 
@@ -614,7 +651,18 @@ const Enrollments = () => {
                 labelRowsPerPage="Filas por página:"
             />
             {/* ENROLL MODAL */}
-            <Dialog open={enrollModalOpen} onClose={() => setEnrollModalOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog
+                open={enrollModalOpen}
+                onClose={() => {
+                    setEnrollModalOpen(false);
+                    setSelectedStudent(null);
+                    setNewStudentForm({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
+                    setCiLookupStatus(null);
+                    setCiLookupUser(null);
+                }}
+                maxWidth="sm"
+                fullWidth
+            >
                 <DialogTitle>Nueva Inscripción</DialogTitle>
                 <DialogContent>
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -623,7 +671,7 @@ const Enrollments = () => {
                                 size="small"
                                 variant={enrollTab === 0 ? 'contained' : 'outlined'}
                                 color="primary"
-                                onClick={() => setEnrollTab(0)}
+                                onClick={() => { setEnrollTab(0); setCiLookupStatus(null); setCiLookupUser(null); }}
                             >
                                 Buscar Estudiante Existente
                             </Button>
@@ -667,53 +715,101 @@ const Enrollments = () => {
                         </Box>
                     ) : (
                         <Grid container spacing={2} sx={{ pt: 1 }}>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="CI" value={newStudentForm.ci_number} onChange={(e) => setNewStudentForm({ ...newStudentForm, ci_number: e.target.value })} variant="outlined" fullWidth />
+                            {/* CI lookup status banner */}
+                            {ciLookupStatus === 'found' && ciLookupUser && (
+                                <Grid size={{ xs: 12 }}>
+                                    <Alert severity="info" sx={{ py: 0.5 }}>
+                                        Estudiante existente: <strong>{ciLookupUser.paternal_surname} {ciLookupUser.maternal_surname} {ciLookupUser.first_name}</strong>.
+                                        Se creará una nueva inscripción en esta materia.
+                                    </Alert>
+                                </Grid>
+                            )}
+                            {ciLookupStatus === 'new' && (
+                                <Grid size={{ xs: 12 }}>
+                                    <Alert severity="success" sx={{ py: 0.5 }}>
+                                        CI no registrado. Se creará un nuevo estudiante.
+                                    </Alert>
+                                </Grid>
+                            )}
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="CI"
+                                    value={newStudentForm.ci_number}
+                                    onChange={(e) => {
+                                        setNewStudentForm({ ...newStudentForm, ci_number: e.target.value });
+                                        setCiLookupStatus(null);
+                                        setCiLookupUser(null);
+                                    }}
+                                    onBlur={handleCiBlur}
+                                    variant="outlined"
+                                    fullWidth
+                                    InputProps={{
+                                        endAdornment: ciLookupStatus === 'searching'
+                                            ? <MuiCircularProgress size={18} />
+                                            : null
+                                    }}
+                                />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="Nombre" value={newStudentForm.first_name} onChange={(e) => setNewStudentForm({ ...newStudentForm, first_name: e.target.value })} variant="outlined" fullWidth />
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="Nombre"
+                                    value={newStudentForm.first_name}
+                                    onChange={(e) => setNewStudentForm({ ...newStudentForm, first_name: e.target.value })}
+                                    variant="outlined"
+                                    fullWidth
+                                />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="Apellido Paterno" value={newStudentForm.paternal_surname} onChange={(e) => setNewStudentForm({ ...newStudentForm, paternal_surname: e.target.value })} variant="outlined" fullWidth />
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="Apellido Paterno"
+                                    value={newStudentForm.paternal_surname}
+                                    onChange={(e) => setNewStudentForm({ ...newStudentForm, paternal_surname: e.target.value })}
+                                    variant="outlined"
+                                    fullWidth
+                                />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="Apellido Materno" value={newStudentForm.maternal_surname} onChange={(e) => setNewStudentForm({ ...newStudentForm, maternal_surname: e.target.value })} variant="outlined" fullWidth />
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="Apellido Materno"
+                                    value={newStudentForm.maternal_surname}
+                                    onChange={(e) => setNewStudentForm({ ...newStudentForm, maternal_surname: e.target.value })}
+                                    variant="outlined"
+                                    fullWidth
+                                />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="Email" type="email" value={newStudentForm.email} onChange={(e) => setNewStudentForm({ ...newStudentForm, email: e.target.value })} variant="outlined" fullWidth />
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="Email"
+                                    type="email"
+                                    value={newStudentForm.email}
+                                    onChange={(e) => setNewStudentForm({ ...newStudentForm, email: e.target.value })}
+                                    variant="outlined"
+                                    fullWidth
+                                />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 6
-                                }}>
-                                <TextField label="Teléfono" value={newStudentForm.phone} onChange={(e) => setNewStudentForm({ ...newStudentForm, phone: e.target.value })} variant="outlined" fullWidth />
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="Teléfono"
+                                    value={newStudentForm.phone}
+                                    onChange={(e) => setNewStudentForm({ ...newStudentForm, phone: e.target.value })}
+                                    variant="outlined"
+                                    fullWidth
+                                />
                             </Grid>
                         </Grid>
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => { setEnrollModalOpen(false); setSelectedStudent(null); }} color="primary">
+                    <Button
+                        onClick={() => {
+                            setEnrollModalOpen(false);
+                            setSelectedStudent(null);
+                            setNewStudentForm({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
+                            setCiLookupStatus(null);
+                            setCiLookupUser(null);
+                        }}
+                        color="primary"
+                    >
                         Cancelar
                     </Button>
                     {enrollTab === 0 ? (
@@ -741,17 +837,27 @@ const Enrollments = () => {
                                     student_ids: [],
                                     students_to_create: [newStudentForm]
                                 })
-                                    .then(() => {
-                                        setSnackbar({ open: true, message: 'Estudiante creado e inscrito correctamente', severity: 'success' });
+                                    .then(response => {
+                                        const msg = response.data.reused_users_count > 0
+                                            ? 'Estudiante existente inscrito en esta materia correctamente'
+                                            : 'Estudiante creado e inscrito correctamente';
+                                        setSnackbar({ open: true, message: msg, severity: 'success' });
                                         fetchEnrollments();
                                         setEnrollModalOpen(false);
                                         setNewStudentForm({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
+                                        setCiLookupStatus(null);
+                                        setCiLookupUser(null);
                                     })
-                                    .catch(() => setSnackbar({ open: true, message: 'Error al crear e inscribir estudiante', severity: 'error' }))
+                                    .catch(err => {
+                                        const msg = err.response?.data?.non_field_errors?.[0]
+                                            || err.response?.data?.detail
+                                            || 'Error al inscribir estudiante';
+                                        setSnackbar({ open: true, message: msg, severity: 'error' });
+                                    })
                                     .finally(() => setEnrollNewLoading(false));
                             }}
                         >
-                            {enrollNewLoading ? 'Guardando...' : 'Crear e Inscribir'}
+                            {enrollNewLoading ? 'Guardando...' : (ciLookupStatus === 'found' ? 'Inscribir en esta materia' : 'Crear e Inscribir')}
                         </Button>
                     )}
                 </DialogActions>

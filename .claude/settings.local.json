@@ -48,7 +48,9 @@
       "Bash(find:*)",
       "Bash(npx playwright *)",
       "Bash(npx --yes playwright install chromium)",
-      "Bash(sudo apt-get install -y libnspr4 libnss3)"
+      "Bash(sudo apt-get install -y libnspr4 libnss3)",
+      "Bash(mkdir -p /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/commands)",
+      "Bash(touch /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/__init__.py /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/commands/__init__.py)"
     ]
   },
   "enabledPlugins": {

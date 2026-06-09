@@ -98,6 +98,19 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         model = models.Enrollment
         fields = '__all__'
 
+    def validate(self, data):
+        student = data.get('student', getattr(self.instance, 'student', None))
+        course = data.get('course', getattr(self.instance, 'course', None))
+        if student and course:
+            qs = models.Enrollment.objects.filter(student=student, course=course)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'non_field_errors': 'El estudiante ya está inscrito en esta materia.'}
+                )
+        return data
+
 class EnrollmentListSerializer(serializers.ModelSerializer):
     """Serializer ligero para el listado de inscripciones (sin course_details)."""
     student_details = UserSerializer(source='student', read_only=True)

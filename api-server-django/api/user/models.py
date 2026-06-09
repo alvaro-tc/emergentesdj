@@ -53,7 +53,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=255, blank=True, null=True)
     paternal_surname = models.CharField(max_length=255, blank=True, null=True)
     maternal_surname = models.CharField(max_length=255, blank=True, null=True)
-    ci_number = models.CharField(max_length=50, blank=True, null=True)
+    ci_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ADMIN)
     active_course = models.ForeignKey('school.Course', on_delete=models.SET_NULL, null=True, blank=True, related_name='active_users')
