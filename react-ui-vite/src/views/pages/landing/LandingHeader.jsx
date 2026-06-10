@@ -150,8 +150,10 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
 
                         {/* Login CTA */}
                         <Box
-                            component={RouterLink}
-                            to="/login"
+                            component="a"
+                            href="/login"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             sx={{
                                 display: { xs: 'none', md: 'inline-flex' },
                                 alignItems: 'center',
@@ -257,8 +259,10 @@ const LandingHeader = ({ isDark, onToggleTheme }) => {
 
                 <Box sx={{ p: 2.5, mt: 'auto', borderTop: `1px solid ${C.border}` }}>
                     <Box
-                        component={RouterLink}
-                        to="/login"
+                        component="a"
+                        href="/login"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         onClick={() => setDrawerOpen(false)}
                         sx={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,

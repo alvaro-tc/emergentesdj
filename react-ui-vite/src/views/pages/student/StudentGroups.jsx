@@ -159,52 +159,60 @@ const StudentGroups = () => {
                                 '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 8px 26px rgba(0,0,0,0.14)' },
                             }}>
                                 {/* Gradient header */}
-                                <Box sx={{ background: `linear-gradient(135deg, ${grad[0]} 0%, ${grad[1]} 100%)`, p: 2 }}>
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        {/* Group number badge */}
-                                        <Box sx={{
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                            bgcolor: 'rgba(0,0,0,0.25)', borderRadius: 2, px: 1.5, py: 0.75,
-                                            border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0, minWidth: 52,
-                                        }}>
-                                            <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.6rem', fontWeight: 600, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                                Grupo
-                                            </Typography>
-                                            <Typography sx={{ color: 'white', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.1 }}>
-                                                {group.group_number ?? '—'}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box flex={1} minWidth={0}>
-                                            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, lineHeight: 1.3 }} noWrap title={group.name}>
-                                                {group.name}
-                                            </Typography>
+                                <Box sx={{ background: `linear-gradient(135deg, ${grad[0]} 0%, ${grad[1]} 100%)`, p: 2.5 }}>
+                                    {/* Top row: group badge + score */}
+                                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <Box sx={{
+                                                bgcolor: 'rgba(0,0,0,0.25)', borderRadius: 1.5, px: 1, py: 0.4,
+                                                border: '1px solid rgba(255,255,255,0.35)',
+                                            }}>
+                                                <Typography sx={{ color: 'white', fontSize: '0.7rem', fontWeight: 700, lineHeight: 1 }}>
+                                                    Grupo {group.group_number ?? '—'}
+                                                </Typography>
+                                            </Box>
                                             <Chip
-                                                icon={<AssignmentIcon sx={{ fontSize: '0.8rem !important', color: 'white !important' }} />}
+                                                icon={<AssignmentIcon sx={{ fontSize: '0.75rem !important', color: 'white !important' }} />}
                                                 label={group.sub_criterion_name}
                                                 size="small"
-                                                sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', mt: 0.5, fontSize: '0.68rem', height: 22 }}
+                                                sx={{ bgcolor: 'rgba(255,255,255,0.18)', color: 'white', fontSize: '0.65rem', height: 20 }}
                                             />
                                         </Box>
-
                                         {hasScore && (
                                             <Chip
                                                 label={scoreVal.toFixed(1)}
                                                 color={getScoreColor(scoreVal)}
                                                 icon={<GradeIcon />}
                                                 size="small"
-                                                sx={{ fontWeight: 700, flexShrink: 0 }}
+                                                sx={{ fontWeight: 700 }}
                                             />
                                         )}
                                     </Box>
+
+                                    {/* Project title — main focus */}
+                                    <Typography
+                                        variant="h4"
+                                        sx={{ color: 'white', fontWeight: 800, lineHeight: 1.25, mb: 0.5 }}
+                                        title={group.title || group.name}
+                                    >
+                                        {group.title || group.name}
+                                    </Typography>
+
+                                    {/* Group name — complementary */}
+                                    {group.title && (
+                                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 400 }}>
+                                            {group.name}
+                                        </Typography>
+                                    )}
                                 </Box>
 
                                 {/* Body */}
                                 <CardContent sx={{ flex: 1, p: 2 }}>
                                     {group.description && (
                                         <Typography
-                                            variant="body2" color="text.secondary"
-                                            sx={{ mb: 1.5, fontStyle: 'italic' }}
+                                            variant="body1"
+                                            color="text.primary"
+                                            sx={{ mb: 1.5, lineHeight: 1.6 }}
                                         >
                                             {group.description}
                                         </Typography>

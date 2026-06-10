@@ -405,7 +405,7 @@ const LandingPage = () => {
                                 </Typography>
 
                                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ ...fadeUp(0.35), justifyContent: 'center' }}>
-                                    <Box component={RouterLink} to="/login" sx={{
+                                    <Box component="a" href="/login" target="_blank" rel="noopener noreferrer" sx={{
                                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1,
                                         textDecoration: 'none',
                                         px: 3.5, py: 1.5,
@@ -648,7 +648,7 @@ const LandingPage = () => {
                         }}>
                             Ingresa al panel de administración y gestiona tu institución con toda la potencia de la plataforma.
                         </Typography>
-                        <Box component={RouterLink} to="/login" sx={{
+                        <Box component="a" href="/login" target="_blank" rel="noopener noreferrer" sx={{
                             display: 'inline-flex', alignItems: 'center', gap: 1.5,
                             textDecoration: 'none',
                             px: 5, py: 1.75,

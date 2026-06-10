@@ -1856,6 +1856,7 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
             data.append({
                 'id': project.id,
                 'name': project.name,
+                'title': project.title,
                 'description': project.description,
                 'group_number': project.group_number,
                 'score': str(project.score) if project.score is not None else None,
