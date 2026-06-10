@@ -81,6 +81,7 @@ api-server-django/course_images/
 # IDE / Editor
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 

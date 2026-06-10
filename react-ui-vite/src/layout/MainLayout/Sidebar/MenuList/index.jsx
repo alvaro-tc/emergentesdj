@@ -107,7 +107,7 @@ const MenuList = () => {
 
     // Inject unread chip into administration group's "messages" item
     const enrichedItems = menuItem.items.map((group) => {
-        if (group.id !== 'administration') return group;
+        if (group.id !== 'portal') return group;
         return {
             ...group,
             children: group.children.map((item) => {

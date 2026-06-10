@@ -142,6 +142,8 @@ const GroupRegistration = () => {
 
     const handleSubmit = async () => {
         if (!groupName.trim()) { setFormError('El nombre del grupo es requerido'); return; }
+        if (!groupTitle.trim()) { setFormError('El título del proyecto es requerido'); return; }
+        if (!description.trim()) { setFormError('La descripción es requerida'); return; }
         const leader = members.find((m) => m.isLeader);
         if (!leader) { setFormError('Debes seleccionar un líder de grupo'); return; }
         if (members.length < 1) { setFormError('El grupo debe tener al menos un integrante'); return; }
@@ -319,14 +321,14 @@ const GroupRegistration = () => {
                             inputProps={{ maxLength: 100 }}
                         />
                         <TextField
-                            label="Título del proyecto"
+                            label="Título del proyecto *"
                             value={groupTitle}
                             onChange={(e) => setGroupTitle(e.target.value)}
                             fullWidth size="small"
                             inputProps={{ maxLength: 255 }}
                         />
                         <TextField
-                            label="Descripción (opcional)"
+                            label="Descripción *"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             fullWidth size="small" multiline rows={2}
@@ -432,7 +434,7 @@ const GroupRegistration = () => {
                     </Button>
                     <Button
                         variant="contained" onClick={handleSubmit}
-                        disabled={submitting || !groupName.trim()}
+                        disabled={submitting || !groupName.trim() || !groupTitle.trim() || !description.trim()}
                         startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <GroupsIcon />}
                         sx={{ borderRadius: 2, fontWeight: 600, minWidth: 150 }}
                     >

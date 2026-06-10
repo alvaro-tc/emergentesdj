@@ -1,9 +1,10 @@
-import { IconFileText, IconShare, IconNews } from '@tabler/icons-react';
+import { IconFileText, IconShare, IconNews, IconMailbox } from '@tabler/icons-react';
 
 const icons = {
     IconFileText,
     IconShare,
-    IconNews
+    IconNews,
+    IconMailbox,
 };
 
 export const portal = {
@@ -42,6 +43,14 @@ export const portal = {
             url: '/extras/landing-config',
             icon: icons.IconFileText,
             breadcrumbs: false
+        },
+        {
+            id: 'messages',
+            title: 'Mensajes',
+            type: 'item',
+            url: '/dashboard/messages',
+            icon: icons.IconMailbox,
+            breadcrumbs: false,
         }
     ]
 };
