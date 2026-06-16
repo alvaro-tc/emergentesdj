@@ -348,11 +348,25 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
 
             for row in rows:
                 if not row: continue
-                row_vals = [str(c).strip() if c is not None else '' for c in row]
+                # Convert floats to int strings before stringifying to avoid "12345678.0" → "123456780"
+                row_vals = []
+                for c in row:
+                    if c is None:
+                        row_vals.append('')
+                    elif isinstance(c, float) and c.is_integer():
+                        row_vals.append(str(int(c)))
+                    else:
+                        row_vals.append(str(c).strip())
 
                 if len(row_vals) <= max(col_map.values()): continue
 
                 raw_ci = row_vals[col_map['ci']]
+                # Also handle the case where the raw CI arrives as a float string like "12345678.0"
+                if raw_ci and '.' in raw_ci:
+                    try:
+                        raw_ci = str(int(float(raw_ci)))
+                    except (ValueError, OverflowError):
+                        pass
                 ci = re.sub(r'\D', '', raw_ci)
                 if not ci or ci in seen_cis: continue
                 seen_cis.add(ci)
@@ -472,6 +486,20 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
 
         created_users_count = 0
         reused_users_count = 0
+
+        # Normalize CIs: strip non-digits and remove trailing .0 from float strings
+        import re as _re
+        def _normalize_ci(raw: str) -> str:
+            if raw and '.' in raw:
+                try:
+                    raw = str(int(float(raw)))
+                except (ValueError, OverflowError):
+                    pass
+            return _re.sub(r'\D', '', raw) if raw else ''
+
+        for s in students_to_create:
+            if s.get('ci_number'):
+                s['ci_number'] = _normalize_ci(str(s['ci_number']))
 
         # 1. Batch-resolve students from Excel rows — avoid N individual queries
         if students_to_create:
