@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 import configData from '../config';
-import { exportGradesToPDF, exportGradesToExcel } from '../utils/gradeCalculations';
+import { exportGradesToPDF, exportGradesToExcel, augmentRowsWithGrades } from '../utils/gradeCalculations';
 
-export const useGradeActions = ({ activeCourse, token, structure, filteredRows, page, pageSize, searchQuery, setRows, fetchGradesheet, loadProjects, isCriterionVisible, showFinalGrade }) => {
+export const useGradeActions = ({ activeCourse, token, structure, page, pageSize, searchQuery, setRows, fetchGradesheet, loadProjects, isCriterionVisible, showFinalGrade }) => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [manageDialogOpen, setManageDialogOpen] = useState(false);
@@ -63,11 +63,22 @@ export const useGradeActions = ({ activeCourse, token, structure, filteredRows, 
             .catch(err => showSnack(err.response?.data?.[0] || 'Error al actualizar proyecto', 'error'));
     }, [currentProject, activeCourse, page, pageSize, searchQuery, fetchGradesheet, loadProjects, showSnack]);
 
-    const handleExport = useCallback((type) => {
+    const handleExport = useCallback(async (type) => {
         if (!activeCourse) return;
-        if (type === 'pdf') exportGradesToPDF(filteredRows, structure, isCriterionVisible, showFinalGrade, activeCourse);
-        else exportGradesToExcel(filteredRows, structure, isCriterionVisible, showFinalGrade, activeCourse);
-    }, [activeCourse, filteredRows, structure, isCriterionVisible, showFinalGrade]);
+        showSnack('Preparando exportación de todo el paralelo...', 'info');
+        try {
+            axios.defaults.headers.common['Authorization'] = `Token ${token}`;
+            // Traer toda la lista del paralelo (sin paginación ni filtro de búsqueda)
+            const params = new URLSearchParams({ course_id: activeCourse.id, page: 1, page_size: 100000 });
+            const response = await axios.get(`${configData.API_SERVER}criterion-scores/gradesheet/?${params}`);
+            const fullStructure = response.data.structure || structure;
+            const allRows = augmentRowsWithGrades(response.data.rows || [], fullStructure);
+            if (type === 'pdf') exportGradesToPDF(allRows, fullStructure, isCriterionVisible, showFinalGrade, activeCourse);
+            else exportGradesToExcel(allRows, fullStructure, isCriterionVisible, showFinalGrade, activeCourse);
+        } catch {
+            showSnack('Error al exportar las calificaciones del paralelo', 'error');
+        }
+    }, [activeCourse, token, structure, isCriterionVisible, showFinalGrade, showSnack]);
 
     const handleOpenTaskModal = useCallback((studentRow, subCritId) => { setTaskModalStudent(studentRow); setTaskModalSubCrit(subCritId); setTaskModalOpen(true); }, []);
     const handleCloseTaskModal = useCallback(() => { setTaskModalOpen(false); setTaskModalStudent(null); setTaskModalSubCrit(null); fetchGradesheet(page, pageSize, searchQuery); }, [fetchGradesheet, page, pageSize, searchQuery]);

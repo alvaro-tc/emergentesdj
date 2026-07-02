@@ -20,17 +20,29 @@ export const augmentRowsWithGrades = (rows, structure) =>
             let criterionGradeNumeric = 0;
             let criterionGrade = '-';
             if (totalScore > 0 || extraPoints > 0) {
-                const rawTotal = totalScore + extraPoints;
-                criterionGradeNumeric = Math.min(rawTotal, parseFloat(group.weight));
+                // La base se topa al peso del criterio; los puntos extra se suman por encima.
+                const cappedBase = Math.min(totalScore, parseFloat(group.weight));
+                criterionGradeNumeric = cappedBase + extraPoints;
                 criterionGrade = criterionGradeNumeric.toFixed(2);
             }
             criterionGrades[group.id] = { grade: criterionGradeNumeric, weight: parseFloat(group.weight), formatted: criterionGrade };
             if (criterionGradeNumeric > 0) finalGradeNumeric += criterionGradeNumeric;
         });
-        return { ...row, _criterionGrades: criterionGrades, _finalGrade: finalGradeNumeric > 0 ? finalGradeNumeric.toFixed(2) : '-' };
+        // La nota final nunca supera 100, aunque los extras acumulados lo permitieran.
+        const cappedFinal = Math.min(finalGradeNumeric, 100);
+        return { ...row, _criterionGrades: criterionGrades, _finalGrade: finalGradeNumeric > 0 ? cappedFinal.toFixed(2) : '-' };
     });
 
-export const buildExportRows = (rows, structure, isCriterionVisible, showFinalGrade) => {
+// numeric = true genera valores numéricos reales (para Excel); false genera texto formateado (para PDF).
+export const buildExportRows = (rows, structure, isCriterionVisible, showFinalGrade, numeric = false) => {
+    const empty = numeric ? null : '-';
+    const num = (v) => {
+        if (v === undefined || v === null || v === '') return empty;
+        const n = parseFloat(v);
+        if (Number.isNaN(n)) return empty;
+        return numeric ? n : n.toFixed(2);
+    };
+
     const headers = ['No.', 'CI', 'Paterno', 'Materno', 'Nombres'];
     structure.forEach(group => {
         const visibleSubs = group.sub_criteria.filter(s => s.visible);
@@ -48,14 +60,20 @@ export const buildExportRows = (rows, structure, isCriterionVisible, showFinalGr
             const visibleSubs = group.sub_criteria.filter(s => s.visible);
             const visibleSpecials = (group.special_criteria || []).filter(s => s.visible);
             if ((visibleSubs.length + visibleSpecials.length) === 0 && !isCriterionVisible(group.id)) return;
-            visibleSubs.forEach(sub => r.push(row.grades[sub.id] ? parseFloat(row.grades[sub.id]).toFixed(2) : '-'));
-            visibleSpecials.forEach(spec => r.push(row.grades[spec.id] ? `+${parseFloat(row.grades[spec.id]).toFixed(2)}` : '-'));
+            visibleSubs.forEach(sub => r.push(num(row.grades[sub.id])));
+            visibleSpecials.forEach(spec => {
+                const raw = row.grades[spec.id];
+                if (raw === undefined || raw === null || raw === '') { r.push(empty); return; }
+                const n = parseFloat(raw);
+                if (Number.isNaN(n)) { r.push(empty); return; }
+                r.push(numeric ? n : `+${n.toFixed(2)}`);
+            });
             if (isCriterionVisible(group.id)) {
                 const cg = row._criterionGrades?.[group.id];
-                r.push(cg ? cg.grade.toFixed(2) : '-');
+                r.push(cg ? (numeric ? cg.grade : cg.grade.toFixed(2)) : empty);
             }
         });
-        if (showFinalGrade) r.push(row._finalGrade || '-');
+        if (showFinalGrade) r.push(num(row._finalGrade));
         return r;
     });
     return { headers, dataRows };
@@ -74,9 +92,22 @@ export const exportGradesToPDF = (rows, structure, isCriterionVisible, showFinal
 };
 
 export const exportGradesToExcel = (rows, structure, isCriterionVisible, showFinalGrade, activeCourse) => {
-    const { headers, dataRows } = buildExportRows(rows, structure, isCriterionVisible, showFinalGrade);
+    const { headers, dataRows } = buildExportRows(rows, structure, isCriterionVisible, showFinalGrade, true);
     const fileName = `Calificaciones_${activeCourse.subject_details?.name || 'Curso'}_${activeCourse.parallel || ''}_${new Date().toLocaleDateString('es-BO').replace(/\//g, '-')}`;
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+    // Forzar formato numérico en las columnas de notas (todas menos No., CI, Paterno, Materno, Nombres)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; R += 1) {
+        for (let C = 5; C <= range.e.c; C += 1) {
+            const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+            if (cell && typeof cell.v === 'number') {
+                cell.t = 'n';
+                cell.z = '0.00';
+            }
+        }
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Calificaciones');
     XLSX.writeFile(wb, `${fileName}.xlsx`);

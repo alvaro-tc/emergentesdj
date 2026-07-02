@@ -24,7 +24,7 @@ const ExportGradesDialog = ({ open, onClose, onExport }) => {
             <Divider />
             <DialogContent>
                 <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                    Seleccione el formato de descarga. Solo se incluirán las columnas visibles actualmente.
+                    Seleccione el formato de descarga. Se incluirá a todos los estudiantes del paralelo con las columnas visibles actualmente.
                 </Typography>
                 <List component="nav">
                     <ListItem button onClick={() => handleOptionClick('excel')}>

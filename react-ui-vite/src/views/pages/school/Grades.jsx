@@ -33,7 +33,7 @@ const Grades = () => {
 
     const rowsWithGrades = useMemo(() => augmentRowsWithGrades(rows, structure), [rows, structure]);
 
-    const actions = useGradeActions({ activeCourse, token: account.token, structure, filteredRows: rowsWithGrades, page, pageSize, searchQuery: search, setRows, fetchGradesheet, loadProjects, isCriterionVisible: isCriterionGradeVisible, showFinalGrade });
+    const actions = useGradeActions({ activeCourse, token: account.token, structure, page, pageSize, searchQuery: search, setRows, fetchGradesheet, loadProjects, isCriterionVisible: isCriterionGradeVisible, showFinalGrade });
 
     if (!activeCourse) {
         return (

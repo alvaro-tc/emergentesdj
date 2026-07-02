@@ -848,7 +848,8 @@ class ReportViewSet(viewsets.ViewSet):
                                 'max_points': parent.weight, # Cap limit
                                 'sum_max_points': 0, # Sum of children max points (for display if needed)
                                 'score': 0,
-                                'raw_score': 0, # Uncapped sum
+                                'raw_score': 0, # Uncapped sum of base sub-criteria
+                                'extra_score': 0, # Puntos extra (se suman por encima del peso)
                                 'sub_criteria': [],
                                 'is_special': False
                             }
@@ -920,7 +921,7 @@ class ReportViewSet(viewsets.ViewSet):
                                 'is_special': True,
                                 'tasks': sub_tasks_list
                             })
-                            grouped_criteria[parent.id]['raw_score'] += final_score
+                            grouped_criteria[parent.id]['extra_score'] += final_score
                         else:
                             criteria_grades.append({
                                 'name': spec.name,
@@ -932,7 +933,9 @@ class ReportViewSet(viewsets.ViewSet):
                             })
 
                     for pid, group in grouped_criteria.items():
-                        group['score'] = min(float(group['raw_score']), float(group['max_points']))
+                        # Base topada al peso; los extras suman por encima.
+                        capped_base = min(float(group['raw_score']), float(group['max_points']))
+                        group['score'] = capped_base + float(group['extra_score'])
                         criteria_grades.append(group)
 
                     data['enrolled_courses'].append({
@@ -1344,9 +1347,9 @@ def update_final_grade(enrollment_id):
     Calculates and updates the final_grade for an enrollment based on Direct Points.
     Logic:
     For each EvaluationCriterion:
-      Total = Sum(SubCriterionScores) + Sum(SpecialCriterionScores)
-      CappedTotal = Min(Total, Criterion.Weight)
-    FinalGrade = Sum(CappedTotal for all Criteria)
+      CappedBase = Min(Sum(SubCriterionScores), Criterion.Weight)
+      CriterionTotal = CappedBase + Sum(SpecialCriterionScores)  # extras suman por encima del peso
+    FinalGrade = Min(Sum(CriterionTotal for all Criteria), 100)
     """
     from django.db.models import Sum
     try:
@@ -1375,14 +1378,13 @@ def update_final_grade(enrollment_id):
                     special_criterion__parent_criterion=criterion
                 ).aggregate(t=Sum('score'))['t'] or 0
                 
-                total_criterion_score = float(regular_sum) + float(special_sum)
-                
-                # 3. Cap at Criterion Weight
+                # 3. Cap la base al peso del criterio; los extras se suman por encima.
                 max_weight = float(criterion.weight)
-                capped_score = min(total_criterion_score, max_weight)
-                
+                capped_base = min(float(regular_sum), max_weight)
+                capped_score = capped_base + float(special_sum)
+
                 final_grade += capped_score
-                
+
         else:
             # Fallback for legacy courses or weird Data?
             # Just sum everything as before, but we can't cap without parent info easily.
@@ -1390,6 +1392,9 @@ def update_final_grade(enrollment_id):
             total_regular = models.CriterionScore.objects.filter(enrollment=enrollment).aggregate(t=Sum('score'))['t'] or 0
             total_special = models.SpecialCriterionScore.objects.filter(enrollment=enrollment).aggregate(t=Sum('score'))['t'] or 0
             final_grade = float(total_regular) + float(total_special)
+
+        # La nota final nunca supera 100, aunque los extras acumulados lo permitieran.
+        final_grade = min(final_grade, 100.0)
 
         enrollment.final_grade = final_grade
         enrollment.save()
