@@ -35,9 +35,12 @@ import { useSelector } from 'react-redux';
 import CourseDialog from './CourseDialog';
 import CourseRequestsDialog from './CourseRequestsDialog';
 import { formatSchedule, getScheduleItems } from '../../../utils/scheduleUtils';
+import usePeriodContext from '../../../hooks/usePeriodContext';
 
 const Courses = () => {
     const account = useSelector((state) => state.account);
+    // Periodo en contexto: el activo, o el que el admin esté revisando temporalmente.
+    const { contextPeriod } = usePeriodContext();
     const [courses, setCourses] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -56,6 +59,11 @@ const Courses = () => {
     const [periods, setPeriods] = useState([]);
     const [filterSubject, setFilterSubject] = useState('');
     const [filterPeriod, setFilterPeriod] = useState('');
+
+    // El listado sigue al periodo en contexto (activo o revisión temporal).
+    useEffect(() => {
+        setFilterPeriod(contextPeriod ? contextPeriod.id : '');
+    }, [contextPeriod]);
 
 
     const fetchCourses = () => {

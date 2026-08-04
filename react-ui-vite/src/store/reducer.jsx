@@ -4,6 +4,7 @@ import storage from 'redux-persist/lib/storage';
 
 import accountReducer from './accountSlice';
 import customizationReducer from './customizationSlice';
+import periodReducer from './periodSlice';
 
 const reducer = combineReducers({
     account: persistReducer(
@@ -11,6 +12,8 @@ const reducer = combineReducers({
         accountReducer
     ),
     customization: customizationReducer,
+    // Sin persistir: el cambio temporal de periodo no debe sobrevivir a una recarga.
+    period: periodReducer,
 });
 
 export default reducer;

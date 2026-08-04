@@ -16,8 +16,11 @@ import MainCard from '../../../ui-component/cards/MainCard';
 import axios from 'axios';
 import configData from '../../../config';
 import { IconCheck } from '@tabler/icons-react';
+import { usePeriodParams } from '../../../hooks/usePeriodContext';
 
 const StudentCourseRegistration = () => {
+    // Solo el periodo activo; un admin puede revisar otro periodo temporalmente.
+    const periodParams = usePeriodParams();
     const [openCourses, setOpenCourses] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState('');
     const [form, setForm] = useState({
@@ -36,14 +39,14 @@ const StudentCourseRegistration = () => {
     useEffect(() => {
         const controller = new AbortController();
         setLoading(true);
-        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal })
+        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal, params: periodParams })
             .then(res => setOpenCourses(res.data))
             .catch(err => {
                 if (!axios.isCancel(err)) setSnackbar({ open: true, message: 'Error cargando cursos disponibles', severity: 'error' });
             })
             .finally(() => setLoading(false));
         return () => controller.abort();
-    }, []);
+    }, [periodParams]);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });

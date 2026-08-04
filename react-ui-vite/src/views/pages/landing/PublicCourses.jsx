@@ -23,10 +23,14 @@ import configData from '../../../config';
 import { getScheduleItems } from '../../../utils/scheduleUtils';
 import { KEYFRAMES, fadeUp } from './LandingTheme';
 import CourseCard from './CourseCard';
+import { usePeriodParams } from '../../../hooks/usePeriodContext';
 
 const PublicCourses = () => {
     // ── Theme state (from shared LandingLayout) ──────────────────────────────
     const { isDark, C, DOT } = useOutletContext();
+
+    // Solo el periodo activo; un admin puede revisar otro periodo temporalmente.
+    const periodParams = usePeriodParams();
 
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -48,12 +52,12 @@ const PublicCourses = () => {
 
     useEffect(() => {
         const controller = new AbortController();
-        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal })
+        axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { signal: controller.signal, params: periodParams })
             .then(res => setCourses(res.data))
             .catch(err => { if (!axios.isCancel(err)) console.error('Failed to fetch courses', err); })
             .finally(() => setLoading(false));
         return () => controller.abort();
-    }, []);
+    }, [periodParams]);
 
     const handleRegisterClick = (course) => {
         setSelectedCourse(course);

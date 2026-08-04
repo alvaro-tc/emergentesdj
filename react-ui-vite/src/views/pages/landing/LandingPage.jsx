@@ -20,6 +20,7 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { getScheduleItems } from '../../../utils/scheduleUtils';
+import { usePeriodParams } from '../../../hooks/usePeriodContext';
 import { KEYFRAMES, fadeUp, DARK, LIGHT } from './LandingTheme';
 import CourseCard from './CourseCard';
 
@@ -225,10 +226,13 @@ const LandingPage = () => {
     // ── Theme state (from shared LandingLayout) ──────────────────────────────
     const { isDark, C, DOT } = useOutletContext();
 
+    // Solo el periodo activo; un admin puede revisar otro periodo temporalmente.
+    const periodParams = usePeriodParams();
+
     React.useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const res = await axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`);
+                const res = await axios.get(`${configData.API_SERVER}student-course-registration/open_courses/`, { params: periodParams });
                 setCourses(res.data);
             } catch { }
             finally { setLoading(false); }
@@ -241,7 +245,7 @@ const LandingPage = () => {
         };
         fetchCourses();
         fetchConfig();
-    }, []);
+    }, [periodParams]);
 
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;

@@ -26,9 +26,13 @@ import { IconTrash, IconUserPlus, IconCheck, IconArrowRight, IconClipboardList, 
 import axios from 'axios';
 import config from '../../../config';
 import { KEYFRAMES, fadeUp } from '../../pages/landing/LandingTheme';
+import { usePeriodParams } from '../../../hooks/usePeriodContext';
 
 const StudentProjectRegistration = () => {
     const { isDark, C, DOT } = useOutletContext();
+
+    // Solo el periodo activo; un admin puede revisar otro periodo temporalmente.
+    const periodParams = usePeriodParams();
 
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
@@ -53,7 +57,7 @@ const StudentProjectRegistration = () => {
     const [successData, setSuccessData] = useState(null);
 
     useEffect(() => {
-        axios.get(`${config.API_SERVER}project-registration/available_projects/`)
+        axios.get(`${config.API_SERVER}project-registration/available_projects/`, { params: periodParams })
             .then(res => {
                 const projects = res.data;
                 setAvailableProjects(projects);
@@ -67,7 +71,7 @@ const StudentProjectRegistration = () => {
                 }
             })
             .catch(err => console.error(err));
-    }, [preSelectedProjectId]);
+    }, [preSelectedProjectId, periodParams]);
 
     const handleNext = () => setActiveStep((prev) => prev + 1);
     const handleBack = () => setActiveStep((prev) => prev - 1);

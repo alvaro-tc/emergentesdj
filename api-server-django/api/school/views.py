@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from rest_framework import viewsets, permissions, status, parsers
 from rest_framework.decorators import action
@@ -20,10 +21,58 @@ class EvaluationTemplateViewSet(AuditMixin, viewsets.ModelViewSet):
     serializer_class = serializers.EvaluationTemplateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+def is_period_manager(user) -> bool:
+    """Solo administradores pueden cambiar temporalmente de periodo."""
+    return bool(
+        user
+        and user.is_authenticated
+        and (user.is_superuser or user.is_staff or getattr(user, 'role', None) == 'ADMIN')
+    )
+
+
+def get_context_period(request) -> Optional[models.AcademicPeriod]:
+    """
+    Periodo con el que debe responderse la petición.
+
+    Por defecto es el periodo activo (única fuente de verdad del landing page).
+    Un administrador puede enviar ?period_id=<id> para consultar temporalmente
+    otro periodo sin alterar el periodo activo del sistema.
+    """
+    override = request.query_params.get('period_id')
+    if override and is_period_manager(getattr(request, 'user', None)):
+        return models.AcademicPeriod.objects.filter(pk=override).first()
+    return models.AcademicPeriod.get_active()
+
+
 class AcademicPeriodViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.AcademicPeriod.objects.all()
     serializer_class = serializers.AcademicPeriodSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'current':
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def current(self, request) -> Response:
+        """Periodo activo del sistema."""
+        period = models.AcademicPeriod.get_active()
+        if not period:
+            return Response(None)
+        return Response(self.get_serializer(period).data)
+
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None) -> Response:
+        """Activa este periodo y desactiva cualquier otro."""
+        if not is_period_manager(request.user):
+            return Response(
+                {'error': 'Solo un administrador puede activar un periodo.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        period = self.get_object()
+        period.activate()
+        return Response(self.get_serializer(period).data)
 
 
 class ProgramViewSet(AuditMixin, viewsets.ModelViewSet):
@@ -1660,10 +1709,22 @@ class StudentProjectRegistrationViewSet(viewsets.ViewSet):
         If authenticated, includes already_registered and my_project_id per entry.
         """
         course_id = request.query_params.get('course_id')
-        queryset = models.CourseSubCriterion.objects.filter(is_project_registration_open=True)
+        queryset = (
+            models.CourseSubCriterion.objects
+            .filter(is_project_registration_open=True)
+            .select_related('course', 'course__subject')
+        )
 
         if course_id:
+            # Consulta acotada a un curso concreto (estudiante dentro de su curso).
             queryset = queryset.filter(course_id=course_id)
+        else:
+            # Listado público (landing): solo el periodo activo, o el periodo
+            # que un administrador esté revisando temporalmente.
+            period = get_context_period(request)
+            if not period:
+                return Response([])
+            queryset = queryset.filter(course__period=period)
 
         # Build registration map for authenticated students
         registered_map = {}
@@ -1907,8 +1968,17 @@ class StudentCourseRegistrationViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def open_courses(self, request):
-        now = timezone.now()
-        courses = models.Course.objects.filter(is_visible=True, active=True)
+        # El landing page solo muestra información del periodo activo
+        # (o del periodo consultado temporalmente por un administrador).
+        period = get_context_period(request)
+        if not period:
+            return Response([])
+
+        courses = (
+            models.Course.objects
+            .filter(is_visible=True, active=True, period=period)
+            .select_related('subject', 'subject__period', 'period', 'teacher')
+        )
         # Serialize all visible courses. The frontend uses course.is_registration_open
         # to decide whether to show the "Inscribirse Ahora" button.
         serializer = serializers.CourseSerializer(courses, many=True)
@@ -1922,6 +1992,14 @@ class StudentCourseRegistrationViewSet(viewsets.ViewSet):
             ci = serializer.validated_data.get('ci')
             course = serializer.validated_data.get('course')
             email = serializer.validated_data.get('email')
+
+            # Solo se aceptan inscripciones de cursos del periodo activo
+            active_period = models.AcademicPeriod.get_active()
+            if not active_period or course.period_id != active_period.id:
+                return Response(
+                    {'error': 'Este curso no pertenece al periodo académico activo.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # Check if already enrolled
             if models.Enrollment.objects.filter(student__ci_number=ci, course=course).exists():

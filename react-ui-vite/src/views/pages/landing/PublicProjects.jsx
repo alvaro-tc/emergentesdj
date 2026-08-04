@@ -20,17 +20,22 @@ import axios from 'axios';
 import configData from '../../../config';
 import MainCard from '../../../ui-component/cards/MainCard';
 import { IconClipboardList, IconSearch } from '@tabler/icons-react';
+import { usePeriodParams } from '../../../hooks/usePeriodContext';
 
 const PublicProjects = () => {
     const theme = useTheme();
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    // Solo el periodo activo; un admin puede revisar otro periodo temporalmente.
+    const periodParams = usePeriodParams();
 
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                const response = await axios.get(`${configData.API_SERVER}project-registration/available_projects/`);
+                const response = await axios.get(`${configData.API_SERVER}project-registration/available_projects/`, {
+                    params: periodParams
+                });
                 setProjects(response.data);
             } catch (error) {
                 console.error("Failed to fetch projects", error);
@@ -40,7 +45,7 @@ const PublicProjects = () => {
         };
 
         fetchProjects();
-    }, []);
+    }, [periodParams]);
 
     const filteredProjects = projects.filter(p =>
         (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||

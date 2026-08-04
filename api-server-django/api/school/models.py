@@ -1,17 +1,52 @@
 
 
-from django.db import models
+from typing import Optional
+
+from django.db import models, transaction
 from django.conf import settings
 
 class AcademicPeriod(models.Model):
     name = models.CharField(max_length=255)
     start_date = models.DateField()
     end_date = models.DateField()
-    active = models.BooleanField(default=True)
+    # Solo un periodo puede estar activo a la vez (ver activate()).
+    active = models.BooleanField(default=False)
     parent_period = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='sub_periods')
 
-    def __str__(self):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['active'],
+                condition=models.Q(active=True),
+                name='unique_active_academic_period',
+            )
+        ]
+
+    def __str__(self) -> str:
         return self.name
+
+    @classmethod
+    def get_active(cls) -> Optional["AcademicPeriod"]:
+        """Periodo activo del sistema (fuente de verdad para el landing page)."""
+        return cls.objects.filter(active=True).first()
+
+    @transaction.atomic
+    def activate(self) -> "AcademicPeriod":
+        """Marca este periodo como el único activo."""
+        AcademicPeriod.objects.filter(active=True).exclude(pk=self.pk).update(active=False)
+        if not self.active:
+            self.active = True
+            super().save(update_fields=['active'])
+        return self
+
+    def save(self, *args, **kwargs) -> None:
+        """Garantiza la exclusividad del periodo activo también en create/update."""
+        if self.active:
+            with transaction.atomic():
+                AcademicPeriod.objects.filter(active=True).exclude(pk=self.pk).update(active=False)
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
 class Program(models.Model):
     name = models.CharField(max_length=255)
