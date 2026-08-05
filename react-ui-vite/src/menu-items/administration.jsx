@@ -66,7 +66,7 @@ export const administration = {
         },
         {
             id: 'criteria',
-            title: 'Etapas',
+            title: 'Tipos de Evaluación',
             type: 'item',
             url: '/school/criteria',
             icon: icons.IconList,

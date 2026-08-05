@@ -58,7 +58,7 @@ const Weightings = () => {
         axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
 
         // 1. Fetch Subject Criteria (via EvaluationTemplate)
-        const templateId = activeCourse.subject_details?.evaluation_template;
+        const templateId = activeCourse.evaluation_template;
 
         const fetchCriteriaReq = templateId
             ? axios.get(`${configData.API_SERVER}evaluation-templates/${templateId}`)
@@ -289,8 +289,10 @@ const Weightings = () => {
                 <Typography variant="h3">Ponderaciones - {activeCourse.subject_details?.name}</Typography>
             </Grid>
         }>
-            {!activeCourse.subject_details?.evaluation_template && (
-                <Alert severity="error">Esta materia no tiene un Modelo de Evaluación asignado. Contacte al administrador.</Alert>
+            {!activeCourse.evaluation_template && (
+                <Alert severity="error">
+                    Este curso no tiene un Tipo de Evaluación asignado. Selecciónalo al editar el curso.
+                </Alert>
             )}
 
             {criteria.map((criterion) => {

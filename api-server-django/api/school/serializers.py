@@ -50,9 +50,8 @@ class EvaluationTemplateSerializer(serializers.ModelSerializer):
         return instance
 
 class SubjectSerializer(serializers.ModelSerializer):
+    """La materia es genérica: no pertenece a ningún periodo (lo define el curso)."""
     program_details = ProgramSerializer(source='program', read_only=True)
-    period_details = AcademicPeriodSerializer(source='period', read_only=True)
-    evaluation_template_details = EvaluationTemplateSerializer(source='evaluation_template', read_only=True)
     has_grades = serializers.SerializerMethodField()
 
     class Meta:
@@ -64,6 +63,9 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     subject_details = SubjectSerializer(source='subject', read_only=True)
+    # El curso define su periodo y su tipo de evaluación (etapas con las que se califica).
+    period_details = AcademicPeriodSerializer(source='period', read_only=True)
+    evaluation_template_details = EvaluationTemplateSerializer(source='evaluation_template', read_only=True)
     teacher_name = serializers.CharField(source='teacher.email', read_only=True)
     course_identifier = serializers.CharField(
         max_length=100, required=False, allow_blank=True, allow_null=True

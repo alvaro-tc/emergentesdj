@@ -56,13 +56,15 @@ class Program(models.Model):
         return self.name
 
 class Subject(models.Model):
+    """
+    Materia genérica del plan de estudios. No depende de un periodo académico:
+    el periodo lo define el curso (Course), que es donde se inscriben los estudiantes.
+    """
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50)
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='subjects')
-    period = models.ForeignKey('AcademicPeriod', on_delete=models.CASCADE, related_name='subjects', null=True)
     description = models.TextField(blank=True, null=True)
     archived = models.BooleanField(default=False)
-    evaluation_template = models.ForeignKey('EvaluationTemplate', on_delete=models.SET_NULL, null=True, blank=True, related_name='subjects')
     subcriteria_locked = models.BooleanField(default=True)
 
     def __str__(self):
@@ -71,6 +73,10 @@ class Subject(models.Model):
 class Course(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='courses')
     period = models.ForeignKey(AcademicPeriod, on_delete=models.CASCADE, related_name='courses')
+    # Tipo de evaluación: define las etapas con las que se califica este curso.
+    evaluation_template = models.ForeignKey(
+        'EvaluationTemplate', on_delete=models.SET_NULL, null=True, blank=True, related_name='courses'
+    )
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='teaching_courses')
     active = models.BooleanField(default=True)
     parallel = models.CharField(max_length=50, blank=True, null=True)

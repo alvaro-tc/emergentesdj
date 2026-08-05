@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
-import { Avatar, Chip, ListItemButton, ListItemIcon, ListItemText, Typography, useMediaQuery } from '@mui/material';
+import { Avatar, Chip, ListItemButton, ListItemIcon, ListItemText, Tooltip, Typography, useMediaQuery } from '@mui/material';
 
 // project imports
 import { menuOpen, setMenu } from '../../../../../store/actions';
@@ -58,7 +58,7 @@ const NavItem = ({ item, level }) => {
         // eslint-disable-next-line
     }, []);
 
-    return (
+    const button = (
         <ListItemButton
             {...listItemProps}
             disabled={item.disabled}
@@ -113,6 +113,17 @@ const NavItem = ({ item, level }) => {
             )}
         </ListItemButton>
     );
+
+    // Un ítem deshabilitado explica por qué; ocultarlo confundiría más que mostrarlo.
+    if (item.disabled && item.disabledReason) {
+        return (
+            <Tooltip title={item.disabledReason} placement="right">
+                <span>{button}</span>
+            </Tooltip>
+        );
+    }
+
+    return button;
 };
 
 NavItem.propTypes = {

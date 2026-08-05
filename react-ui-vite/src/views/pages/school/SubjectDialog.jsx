@@ -20,15 +20,9 @@ import { useSelector } from 'react-redux';
 const SubjectDialog = ({ open, handleClose, subject, onSave }) => {
     const account = useSelector((state) => state.account);
     const [programs, setPrograms] = useState([]);
-    const [periods, setPeriods] = useState([]);
-    const [templates, setTemplates] = useState([]);
 
     useEffect(() => {
-        if (open) {
-            fetchPrograms();
-            fetchPeriods();
-            fetchTemplates();
-        }
+        if (open) fetchPrograms();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
@@ -37,20 +31,6 @@ const SubjectDialog = ({ open, handleClose, subject, onSave }) => {
         axios.get(configData.API_SERVER + 'programs')
             .then(response => setPrograms(response.data))
             .catch(error => console.error("Error fetching programs", error));
-    };
-
-    const fetchPeriods = () => {
-        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-        axios.get(configData.API_SERVER + 'periods')
-            .then(response => setPeriods(response.data))
-            .catch(error => console.error("Error fetching periods", error));
-    };
-
-    const fetchTemplates = () => {
-        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-        axios.get(configData.API_SERVER + 'evaluation-templates')
-            .then(response => setTemplates(response.data))
-            .catch(error => console.error("Error fetching templates", error));
     };
 
     const handleSubmit = async (values, { setSubmitting, setErrors }) => {
@@ -87,15 +67,12 @@ const SubjectDialog = ({ open, handleClose, subject, onSave }) => {
                             name: subject ? subject.name : '',
                             code: subject ? subject.code : '',
                             program: subject ? subject.program : '',
-                            period: subject ? subject.period : '',
-                            evaluation_template: subject ? subject.evaluation_template : '',
                             archived: subject ? subject.archived : false
                         }}
                         validationSchema={Yup.object().shape({
                             name: Yup.string().max(255).required('El nombre es requerido'),
                             code: Yup.string().max(50).required('El código es requerido'),
-                            program: Yup.number().required('La carrera es requerida'),
-                            period: Yup.number().required('El periodo es requerido')
+                            program: Yup.number().required('La carrera es requerida')
                         })}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -148,26 +125,6 @@ const SubjectDialog = ({ open, handleClose, subject, onSave }) => {
                                             </TextField>
                                         </Grid>
                                         <Grid size={12}>
-                                            <TextField
-                                                select
-                                                fullWidth
-                                                label="Periodo"
-                                                name="period"
-                                                value={values.period}
-                                                onBlur={handleBlur}
-                                                onChange={handleChange}
-                                                error={Boolean(touched.period && errors.period)}
-                                                helperText={touched.period && errors.period}
-                                            >
-                                                {periods.map((per) => (
-                                                    <MenuItem key={per.id} value={per.id}>
-                                                        {per.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
-
-                                        </Grid>
-                                        <Grid size={12}>
                                             <FormControlLabel
                                                 control={
                                                     <Checkbox
@@ -179,25 +136,6 @@ const SubjectDialog = ({ open, handleClose, subject, onSave }) => {
                                                 }
                                                 label="Marcar como Archivada"
                                             />
-                                        </Grid>
-                                        <Grid size={12}>
-                                            <TextField
-                                                select
-                                                fullWidth
-                                                label="Criterios de Evaluación"
-                                                name="evaluation_template"
-                                                value={values.evaluation_template || ''}
-                                                onBlur={handleBlur}
-                                                onChange={handleChange}
-                                                error={Boolean(touched.evaluation_template && errors.evaluation_template)}
-                                                helperText={touched.evaluation_template && errors.evaluation_template}
-                                            >
-                                                {templates.map((temp) => (
-                                                    <MenuItem key={temp.id} value={temp.id}>
-                                                        {temp.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
                                         </Grid>
                                     </Grid>
                                 </DialogContent>

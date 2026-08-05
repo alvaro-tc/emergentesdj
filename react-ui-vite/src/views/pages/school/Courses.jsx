@@ -164,7 +164,8 @@ const Courses = () => {
             (course.teacher_name && course.teacher_name.toLowerCase().includes(search.toLowerCase())) ||
             (course.course_identifier && course.course_identifier.toLowerCase().includes(search.toLowerCase()));
 
-        const isArchived = course.subject_details?.archived;
+        // Archivado = curso inactivo, o materia archivada (arrastra a sus cursos).
+        const isArchived = !course.active || course.subject_details?.archived;
 
         if (!showArchived && isArchived) {
             return false;
@@ -173,13 +174,8 @@ const Courses = () => {
         return matchesSearch;
     });
 
-    console.log('🔍 Filtered courses:', filteredCourses.length, 'out of', courses.length);
-    if (filteredCourses.length !== courses.length) {
-        console.log('⚠️ Some courses filtered out. showArchived:', showArchived);
-    }
-
     return (
-        <MainCard title="Paralelos" content={false}>
+        <MainCard title="Cursos" content={false}>
             <CardContent>
                 <Grid container justifyContent="space-between" alignItems="center" spacing={2}>
                     <Grid
@@ -266,6 +262,7 @@ const Courses = () => {
                             <TableCell>Identificador</TableCell>
                             <TableCell>Materia</TableCell>
                             <TableCell>Paralelo</TableCell>
+                            <TableCell>Tipo de Evaluación</TableCell>
                             <TableCell>Docente</TableCell>
                             <TableCell>Horario</TableCell>
                             <TableCell>WhatsApp</TableCell>
@@ -288,6 +285,20 @@ const Courses = () => {
                                         {course.subject_details?.name} ({course.subject_details?.code})
                                     </TableCell>
                                     <TableCell>{course.parallel}</TableCell>
+                                    <TableCell>
+                                        {course.evaluation_template_details ? (
+                                            <Chip
+                                                label={course.evaluation_template_details.name}
+                                                size="small"
+                                                variant="outlined"
+                                                color="secondary"
+                                            />
+                                        ) : (
+                                            <Tooltip title="Sin tipo de evaluación no se pueden definir ponderaciones ni calificar">
+                                                <Chip label="Sin asignar" size="small" color="warning" variant="outlined" />
+                                            </Tooltip>
+                                        )}
+                                    </TableCell>
                                     <TableCell>{course.teacher_name || 'Sin asignar'}</TableCell>
                                     <TableCell>
                                         {getScheduleItems(course.schedule).length > 0 ? (
@@ -330,10 +341,18 @@ const Courses = () => {
                                     </TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={course.subject_details?.archived ? "Archivado" : "Activo"}
-                                            color={course.subject_details?.archived ? "default" : "secondary"}
+                                            label={course.active ? 'Activo' : 'Archivado'}
+                                            color={course.active ? 'secondary' : 'default'}
                                             size="small"
                                         />
+                                        {course.subject_details?.archived && (
+                                            <Chip
+                                                label="Materia archivada"
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ ml: 0.5 }}
+                                            />
+                                        )}
                                         {course.is_registration_open && (
                                             <Chip
                                                 label="Insc. Abierta"
@@ -360,7 +379,7 @@ const Courses = () => {
                             ))}
                         {filteredCourses.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={10} align="center">
                                     No se encontraron registros
                                 </TableCell>
                             </TableRow>

@@ -20,6 +20,7 @@ import axios from 'axios';
 import configData from '../../../config';
 import { useSelector } from 'react-redux';
 import { IconTrash, IconPlus } from '@tabler/icons-react';
+import usePeriodContext from '../../../hooks/usePeriodContext';
 
 const DAYS_OF_WEEK = [
     'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
@@ -37,7 +38,9 @@ const buildImageUrl = (imagePath) => {
 
 const CourseDialog = ({ open, handleClose, course, onSave }) => {
     const account = useSelector((state) => state.account);
+    const { periods, activePeriod } = usePeriodContext({ loadPeriods: true });
     const [subjects, setSubjects] = useState([]);
+    const [templates, setTemplates] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [showArchivedSubjects, setShowArchivedSubjects] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
@@ -45,6 +48,7 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
     useEffect(() => {
         if (open) {
             fetchSubjects();
+            fetchTemplates();
             fetchTeachers();
             const existing = course?.image_url || course?.image || null;
             setImagePreview(buildImageUrl(existing));
@@ -65,6 +69,16 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
             axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
             const response = await axios.get(configData.API_SERVER + 'subjects/');
             setSubjects(response.data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchTemplates = async () => {
+        try {
+            axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+            const response = await axios.get(configData.API_SERVER + 'evaluation-templates');
+            setTemplates(response.data);
         } catch (error) {
             console.error(error);
         }
@@ -141,7 +155,9 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
             else formData.append('whatsapp_link', '');
             if (values.platform_link) formData.append('platform_link', values.platform_link);
             else formData.append('platform_link', '');
-            formData.append('is_visible', values.is_visible);
+            // Archivar es desactivar: un curso archivado nunca se publica.
+            formData.append('active', !values.archived);
+            formData.append('is_visible', values.archived ? false : values.is_visible);
             formData.append('is_registration_open', values.is_registration_open);
 
             if (values.registration_start) formData.append('registration_start', values.registration_start);
@@ -152,11 +168,12 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                 formData.append('image', values.image);
             }
 
-            // Determine period logic (same as before)
-            const selectedSubject = subjects.find(s => s.id === values.subject);
-            const periodId = selectedSubject ? (selectedSubject.period || selectedSubject.period_details?.id) : null;
-            if (periodId) {
-                formData.append('period', periodId);
+            // Periodo y tipo de evaluación son elecciones explícitas del curso.
+            if (values.period) {
+                formData.append('period', values.period);
+            }
+            if (values.evaluation_template) {
+                formData.append('evaluation_template', values.evaluation_template);
             }
 
             const config = {
@@ -193,12 +210,17 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                         initialValues={{
                             course_identifier: course ? (course.course_identifier || '') : '',
                             subject: course ? course.subject : '',
+                            // El periodo y el tipo de evaluación los define el curso, no la materia.
+                            period: course ? course.period : (activePeriod ? activePeriod.id : ''),
+                            evaluation_template: course ? course.evaluation_template : '',
                             parallel: course ? course.parallel : '',
                             teacher: course ? course.teacher : '',
                             scheduleList: parseSchedule(course ? course.schedule : ''),
                             whatsapp_link: course ? (course.whatsapp_link || '') : '',
                             platform_link: course ? (course.platform_link || '') : '',
                             is_visible: course ? course.is_visible : false,
+                            // Un curso archivado es un curso inactivo (`active` en el backend).
+                            archived: course ? !course.active : false,
                             is_registration_open: course ? course.is_registration_open : false,
                             registration_start: course && course.registration_start ? course.registration_start.slice(0, 16) : '',
                             registration_end: course && course.registration_end ? course.registration_end.slice(0, 16) : '',
@@ -207,12 +229,15 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                         validationSchema={Yup.object().shape({
                             course_identifier: Yup.string().max(100).nullable(),
                             subject: Yup.number().required('La materia es requerida'),
+                            period: Yup.number().required('El periodo es requerido'),
+                            evaluation_template: Yup.number().required('El tipo de evaluación es requerido'),
                             parallel: Yup.string().max(50).required('El paralelo es requerido'),
                             teacher: Yup.number().nullable(),
                             // scheduleList validation logic could be added here if strict
                             whatsapp_link: Yup.string().url('Debe ser una URL válida').nullable(),
                             platform_link: Yup.string().url('Debe ser una URL válida').nullable(),
                             is_visible: Yup.boolean(),
+                            archived: Yup.boolean(),
                             is_registration_open: Yup.boolean(),
                             registration_start: Yup.string().nullable(),
                             registration_end: Yup.string().nullable()
@@ -266,6 +291,55 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                                                             {s.code} - {s.name} {s.archived ? '(Archivado)' : ''}
                                                         </MenuItem>
                                                     ))}
+                                            </TextField>
+                                        </Grid>
+                                        <Grid
+                                            size={{
+                                                xs: 12,
+                                                md: 6
+                                            }}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                label="Tipo de Evaluación"
+                                                name="evaluation_template"
+                                                value={values.evaluation_template || ''}
+                                                onBlur={handleBlur}
+                                                onChange={handleChange}
+                                                error={Boolean(touched.evaluation_template && errors.evaluation_template)}
+                                                helperText={
+                                                    (touched.evaluation_template && errors.evaluation_template) ||
+                                                    'Etapas con las que se califica este curso'
+                                                }
+                                            >
+                                                {templates.map((template) => (
+                                                    <MenuItem key={template.id} value={template.id}>
+                                                        {template.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                        </Grid>
+                                        <Grid
+                                            size={{
+                                                xs: 12,
+                                                md: 6
+                                            }}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                label="Periodo"
+                                                name="period"
+                                                value={values.period}
+                                                onBlur={handleBlur}
+                                                onChange={handleChange}
+                                                error={Boolean(touched.period && errors.period)}
+                                                helperText={(touched.period && errors.period) || 'Semestre al que pertenece este curso'}
+                                            >
+                                                {periods.map((p) => (
+                                                    <MenuItem key={p.id} value={p.id}>
+                                                        {p.name} {p.active ? '(activo)' : ''}
+                                                    </MenuItem>
+                                                ))}
                                             </TextField>
                                         </Grid>
                                         <Grid
@@ -418,9 +492,23 @@ const CourseDialog = ({ open, handleClose, course, onSave }) => {
                                                         onChange={handleChange}
                                                         name="is_visible"
                                                         color="primary"
+                                                        disabled={values.archived}
                                                     />
                                                 }
                                                 label="Visible en página pública (landing page y cursos)"
+                                            />
+                                        </Grid>
+                                        <Grid size={12}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Switch
+                                                        checked={values.archived}
+                                                        onChange={handleChange}
+                                                        name="archived"
+                                                        color="warning"
+                                                    />
+                                                }
+                                                label="Archivar curso (lo oculta del listado, del selector y de la página pública)"
                                             />
                                         </Grid>
                                         <Grid size={12}>

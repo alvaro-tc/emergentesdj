@@ -8,6 +8,8 @@ import NavGroup from './NavGroup';
 import menuItem from './../../../../menu-items';
 import { studentSettings } from './../../../../menu-items/student_settings';
 import configData from '../../../../config';
+import useCourseCapabilities from '../../../../hooks/useCourseCapabilities';
+import { applyCourseRules } from '../../../../utils/courseMenuRules';
 
 import { IconUsers, IconUsersGroup } from '@tabler/icons-react';
 
@@ -103,14 +105,17 @@ const useUnreadCount = (token) => {
 const MenuList = () => {
     const account = useSelector(selectAccount);
     const userRole = useSelector(selectUserRole);
+    const activeCourse = useSelector(selectActiveCourse);
     const unreadCount = useUnreadCount(account.token);
+    const capabilities = useCourseCapabilities();
 
     // Inject unread chip into administration group's "messages" item
     const enrichedItems = menuItem.items.map((group) => {
-        if (group.id !== 'portal') return group;
+        const scoped = applyCourseRules(group, capabilities, Boolean(activeCourse));
+        if (scoped.id !== 'portal') return scoped;
         return {
-            ...group,
-            children: group.children.map((item) => {
+            ...scoped,
+            children: scoped.children.map((item) => {
                 if (item.id !== 'messages' || unreadCount === 0) return item;
                 return {
                     ...item,
@@ -132,10 +137,9 @@ const MenuList = () => {
     }
 
     if (userRole === 'TEACHER') {
-        const teacherItems = menuItem.items.filter(
-            (item) => item.id === 'dashboard' || item.id === 'school'
-        );
-        return teacherItems.map((item) => <NavGroup key={item.id} item={item} />);
+        return enrichedItems
+            .filter((item) => item.id === 'dashboard' || item.id === 'school')
+            .map((item) => <NavGroup key={item.id} item={item} />);
     }
 
     return enrichedItems.map((item) => {

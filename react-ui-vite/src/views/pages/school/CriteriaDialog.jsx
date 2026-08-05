@@ -42,7 +42,7 @@ const CriteriaDialog = ({ open, handleClose, template, onSave }) => {
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
             {open && (
                 <>
-                    <DialogTitle>{template ? 'Editar Plantilla de Etapas' : 'Nueva Plantilla de Etapas'}</DialogTitle>
+                    <DialogTitle>{template ? 'Editar Tipo de Evaluación' : 'Nuevo Tipo de Evaluación'}</DialogTitle>
                     <Formik
                         initialValues={{
                             name: template ? template.name : '',

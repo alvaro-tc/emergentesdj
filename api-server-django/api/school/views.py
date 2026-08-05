@@ -81,24 +81,10 @@ class ProgramViewSet(AuditMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 class SubjectViewSet(AuditMixin, viewsets.ModelViewSet):
-    queryset = models.Subject.objects.all()
+    """La materia es genérica y reutilizable entre periodos; se archiva manualmente."""
+    queryset = models.Subject.objects.select_related('program')
     serializer_class = serializers.SubjectSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-        """
-        Auto-archive subjects if their period has ended.
-        """
-        from datetime import date
-        instance = serializer.save()
-        
-        # Check if period has ended and auto-archive if so
-        if instance.period and instance.period.end_date < date.today():
-            instance.archived = True
-            instance.save()
-            print(f"✅ Auto-archived subject: {instance.name} (period ended: {instance.period.end_date})")
-        
-        return instance
 
 
 from decimal import Decimal
@@ -163,12 +149,12 @@ class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Ensure courses are created as active by default.
-        Archived status is inherited from the subject and should be controlled manually.
+        El curso nace activo salvo que se pida lo contrario.
+        `active=False` equivale a archivado: se oculta del listado y del landing.
         """
-        # Save with active=True explicitly to ensure course appears in list
-        instance = serializer.save(active=True)
-        return instance
+        if 'active' in serializer.validated_data:
+            return serializer.save()
+        return serializer.save(active=True)
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -192,7 +178,9 @@ class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
             print(f"Error auto-closing courses: {e}")
 
         user = self.request.user
-        queryset = models.Course.objects.all()
+        queryset = models.Course.objects.select_related(
+            'subject', 'subject__program', 'evaluation_template', 'period', 'teacher'
+        ).prefetch_related('evaluation_template__criteria')
 
         # Apply role-based filtering first
         if user.role == 'TEACHER':
@@ -211,16 +199,34 @@ class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
         if period_id:
             queryset = queryset.filter(period_id=period_id)
 
-        show_archived = self.request.query_params.get('show_archived')
-        
-        if str(show_archived).lower() == 'true':
-             pass
-        else:
-            # Default behavior: Show only active courses AND active subjects
-            # We use exclude(subject__archived=True) to be explicit
+        show_archived = str(self.request.query_params.get('show_archived')).lower() == 'true'
+
+        # El filtro de archivados es propio del listado: sobre un curso concreto
+        # debe poder operarse aunque esté archivado (si no, no habría cómo desarchivarlo).
+        if self.action == 'list' and not show_archived:
             queryset = queryset.filter(active=True).exclude(subject__archived=True)
 
         return queryset
+
+    @action(detail=True, methods=['get'])
+    def capabilities(self, request, pk=None) -> Response:
+        """
+        Qué opciones del menú tienen sentido para este curso.
+        Se resuelve en una sola petición para no generar N+1 en el sidebar.
+        """
+        course = self.get_object()
+        sub_criteria = models.CourseSubCriterion.objects.filter(course=course)
+        return Response({
+            'id': course.id,
+            'period_id': course.period_id,
+            'period_name': course.period.name if course.period else None,
+            'has_enrollments': models.Enrollment.objects.filter(course=course).exists(),
+            'has_template': course.evaluation_template_id is not None,
+            'has_criteria': sub_criteria.exists(),
+            'has_projects': sub_criteria.filter(is_project=True).exists(),
+            'has_tasks': models.CourseTask.objects.filter(sub_criterion__course=course).exists(),
+            'has_presentations': models.Presentation.objects.filter(subject=course.subject_id).exists(),
+        })
 
     @action(detail=True, methods=['get'])
     def preference(self, request, pk=None):
@@ -1407,11 +1413,9 @@ def update_final_grade(enrollment_id):
         
         final_grade = 0.0
         
-        # Iterate over all parent criteria
-        # We need to fetch them from the evaluation template if possible, or just used ones?
-        # Better: get all criteria associated with the course via Subject -> EvaluationTemplate
-        if course.subject and course.subject.evaluation_template:
-            criteria = course.subject.evaluation_template.criteria.all()
+        # Las etapas de calificación provienen del tipo de evaluación del curso.
+        if course.evaluation_template:
+            criteria = course.evaluation_template.criteria.all()
             
             for criterion in criteria:
                 # 1. Sum Regular SubCriteria Scores for this parent
@@ -1977,7 +1981,7 @@ class StudentCourseRegistrationViewSet(viewsets.ViewSet):
         courses = (
             models.Course.objects
             .filter(is_visible=True, active=True, period=period)
-            .select_related('subject', 'subject__period', 'period', 'teacher')
+            .select_related('subject', 'subject__program', 'period', 'teacher')
         )
         # Serialize all visible courses. The frontend uses course.is_registration_open
         # to decide whether to show the "Inscribirse Ahora" button.

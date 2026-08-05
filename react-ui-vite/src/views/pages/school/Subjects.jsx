@@ -157,8 +157,6 @@ const Subjects = () => {
                             <TableCell>Código</TableCell>
                             <TableCell>Nombre</TableCell>
                             <TableCell>Carrera</TableCell>
-                            <TableCell>Periodo</TableCell>
-                            <TableCell>Criterios</TableCell>
                             <TableCell>Estado</TableCell>
                             <TableCell>Acciones</TableCell>
                         </TableRow>
@@ -172,8 +170,6 @@ const Subjects = () => {
                                     <TableCell>{subject.code}</TableCell>
                                     <TableCell>{subject.name}</TableCell>
                                     <TableCell>{subject.program_details ? subject.program_details.name : '-'}</TableCell>
-                                    <TableCell>{subject.period_details ? subject.period_details.name : '-'}</TableCell>
-                                    <TableCell>{subject.evaluation_template_details ? subject.evaluation_template_details.name : '-'}</TableCell>
                                     <TableCell>
                                         <Chip
                                             label={subject.archived ? "Archivado" : "Activo"}
@@ -181,7 +177,6 @@ const Subjects = () => {
                                             size="small"
                                         />
                                     </TableCell>
-                                    {/* Note: Serializer might need update to show period name */}
                                     <TableCell>
 
                                         <IconButton onClick={() => handleEdit(subject)} size="small">
