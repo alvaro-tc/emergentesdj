@@ -17,12 +17,17 @@ const RULES = {
     projects: {
         requires: (caps) => caps.has_projects,
         reason: 'Este curso no tiene etapas de tipo proyecto'
-    },
-    presentations: {
-        requires: (caps) => caps.has_presentations,
-        reason: 'La materia de este curso no tiene presentaciones'
     }
 };
+
+/**
+ * Ítems que no dependen del curso activo.
+ *
+ * `Presentaciones` cuelga de la materia, no del curso ni del periodo: tiene su
+ * propio selector de materia y debe poder abrirse sin curso seleccionado, o no
+ * habría forma de crear la primera.
+ */
+const COURSE_INDEPENDENT = new Set(['presentations']);
 
 const NO_COURSE_REASON = 'Selecciona un curso para trabajar';
 
@@ -38,6 +43,7 @@ export const applyCourseRules = (group, capabilities, hasCourse) => {
     return {
         ...group,
         children: group.children.map((item) => {
+            if (COURSE_INDEPENDENT.has(item.id)) return item;
             if (!hasCourse) {
                 return { ...item, disabled: true, disabledReason: NO_COURSE_REASON };
             }

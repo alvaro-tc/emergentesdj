@@ -1,4 +1,6 @@
 import logging
+import os
+import uuid
 from typing import Optional
 
 from rest_framework import viewsets, permissions, status, parsers
@@ -8,6 +10,7 @@ from rest_framework.response import Response
 from . import models
 from . import serializers
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from api.audit.mixins import AuditMixin
@@ -15,6 +18,11 @@ from api.audit.mixins import AuditMixin
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+# Logos de portada: formatos que el navegador pinta sin plugins y un tamaño que
+# no tiene sentido superar para una imagen que se muestra a 110 px de alto.
+ALLOWED_LOGO_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif'}
+MAX_LOGO_BYTES = 2 * 1024 * 1024
 
 class EvaluationTemplateViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = models.EvaluationTemplate.objects.all()
@@ -225,7 +233,6 @@ class CourseViewSet(AuditMixin, viewsets.ModelViewSet):
             'has_criteria': sub_criteria.exists(),
             'has_projects': sub_criteria.filter(is_project=True).exists(),
             'has_tasks': models.CourseTask.objects.filter(sub_criterion__course=course).exists(),
-            'has_presentations': models.Presentation.objects.filter(subject=course.subject_id).exists(),
         })
 
     @action(detail=True, methods=['get'])
@@ -1692,11 +1699,50 @@ class PresentationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = models.Presentation.objects.all()
+        qs = models.Presentation.objects.select_related('subject')
         subject_id = self.request.query_params.get('subject')
-        if subject_id:
+        if subject_id == 'none':
+            # Presentaciones heredadas todavía sin materia asignada.
+            qs = qs.filter(subject__isnull=True)
+        elif subject_id:
             qs = qs.filter(subject_id=subject_id)
-        return qs.order_by('-created_at')
+        return qs.order_by('-updated_at')
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='upload-logo',
+        parser_classes=[parsers.MultiPartParser, parsers.FormParser],
+    )
+    def upload_logo(self, request) -> Response:
+        """
+        Sube un logo y devuelve su URL absoluta.
+
+        Los logos siguen viviendo en `logo_url` / `logo_oscuro` como URL: subir
+        un archivo es solo otra forma de obtener esa URL, así que el resto del
+        pipeline (portada, export a PDF) no cambia. Se devuelve absoluta porque
+        el deck se sirve desde el frontend, en otro origen que el media de Django.
+        """
+        upload = request.FILES.get('file')
+        if upload is None:
+            return Response({'detail': 'Adjunta el archivo en el campo "file".'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if upload.size > MAX_LOGO_BYTES:
+            return Response({'detail': 'El logo no puede superar los 2 MB.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        extension = os.path.splitext(upload.name)[1].lower()
+        if extension not in ALLOWED_LOGO_EXTENSIONS:
+            allowed = ', '.join(sorted(ALLOWED_LOGO_EXTENSIONS))
+            return Response({'detail': f'Formato no admitido. Usa: {allowed}.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Nombre propio: dos profesores subiendo `logo.png` no deben pisarse.
+        name = f'presentation-logos/{uuid.uuid4().hex}{extension}'
+        stored = default_storage.save(name, upload)
+        return Response({'url': request.build_absolute_uri(default_storage.url(stored))},
+                        status=status.HTTP_201_CREATED)
 
 class StudentProjectRegistrationViewSet(viewsets.ViewSet):
     """

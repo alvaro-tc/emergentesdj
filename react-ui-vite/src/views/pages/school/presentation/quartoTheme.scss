@@ -1,0 +1,763 @@
+/*
+ * Temas de presentación para Reveal.js — cada uno con paleta clara y oscura,
+ * conmutables en vivo.
+ *
+ * Todo el color vive en custom properties `--r-*` / `--q-*` colgadas de
+ * `[data-reveal-theme]` y `[data-reveal-palette]`, porque Reveal pinta el fondo
+ * en `.reveal-viewport`, que es un ancestro del deck. Cambiar los atributos
+ * repinta la presentación entera sin reinicializarla.
+ *
+ * Los selectores no llevan `:root`: así valen tanto en el documento (exposición
+ * a pantalla completa) como en un contenedor suelto (la vista previa del
+ * editor, que tiñe solo su caja). Las custom properties se heredan, de modo que
+ * el contenedor más cercano gana sin competir en la cascada.
+ *
+ * Especificidad, que aquí importa: los bloques de tema llevan dos atributos y
+ * ganan siempre a los de paleta sola, que son el respaldo para el contenido sin
+ * tema. Por eso `quarto` está también como tema explícito y no solo como
+ * respaldo: si dependiera del orden de las reglas, un minificador que
+ * reescriba selectores podría darle la vuelta.
+ *
+ * Los tokens de highlight.js se declaran aquí como variables en vez de cargar
+ * `monokai.css`/`zenburn.css`, para que el código acompañe a la paleta.
+ *
+ * Los mismos colores están en `themes.js`, de donde salen los chips del listado
+ * y el export a PDF. **Cambiar uno obliga a cambiar el otro.**
+ */
+
+/* ── Quarto: neutro y sobrio, el tema por defecto ───────────────────────── */
+@mixin quarto-light {
+  --r-background-color: #fdfdfd;
+  --r-main-color: #222222;
+  --r-heading-color: #1a1a1a;
+  --r-subheading-color: #5a6570;
+  --r-link-color: #2a76dd;
+  --r-link-color-dark: #1a5cb8;
+  --r-link-color-hover: #4a90e8;
+  --r-selection-background-color: #b3d4fc;
+  --r-selection-color: #1a1a1a;
+  --r-overlay-element-bg-color: 0, 0, 0;
+  --r-overlay-element-fg-color: 240, 240, 240;
+
+  --q-muted: #6b7280;
+  --q-rule: #e2e5e9;
+  --q-surface: #f4f6f8;
+  --q-code-bg: #f7f8fa;
+  --q-code-border: #e2e5e9;
+  --q-output-bg: #f0f2f4;
+
+  /* highlight.js */
+  --q-hl-comment: #8a9199;
+  --q-hl-keyword: #a626a4;
+  --q-hl-string: #1a8a44;
+  --q-hl-number: #b8622a;
+  --q-hl-function: #3f6ec6;
+  --q-hl-builtin: #c18401;
+  --q-hl-variable: #d13b3b;
+}
+
+@mixin quarto-dark {
+  --r-background-color: #1c1e21;
+  --r-main-color: #e6e8ea;
+  --r-heading-color: #f4f6f8;
+  --r-subheading-color: #9aa5b1;
+  --r-link-color: #6ea8fe;
+  --r-link-color-dark: #4a8ae0;
+  --r-link-color-hover: #9cc4ff;
+  --r-selection-background-color: #2f4f7d;
+  --r-selection-color: #ffffff;
+  --r-overlay-element-bg-color: 240, 240, 240;
+  --r-overlay-element-fg-color: 0, 0, 0;
+
+  --q-muted: #9aa5b1;
+  --q-rule: #343941;
+  --q-surface: #24272b;
+  --q-code-bg: #22262b;
+  --q-code-border: #343941;
+  --q-output-bg: #1a1d20;
+
+  /* highlight.js */
+  --q-hl-comment: #7b8794;
+  --q-hl-keyword: #c792ea;
+  --q-hl-string: #7fd88f;
+  --q-hl-number: #f2a76c;
+  --q-hl-function: #82aaff;
+  --q-hl-builtin: #ffcb6b;
+  --q-hl-variable: #f07a7a;
+}
+
+/* Respaldo: sin tema ni paleta declarados se ve el Quarto claro. */
+:root,
+[data-reveal-palette='light'] {
+  @include quarto-light;
+}
+
+[data-reveal-palette='dark'] {
+  @include quarto-dark;
+}
+
+[data-reveal-theme='quarto'][data-reveal-palette='light'] {
+  @include quarto-light;
+}
+
+[data-reveal-theme='quarto'][data-reveal-palette='dark'] {
+  @include quarto-dark;
+}
+
+/* ── Tipografía y métricas, comunes a ambas paletas ─────────────────────── */
+:root {
+  --r-background: var(--r-background-color);
+  --r-main-font: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --r-main-font-size: 32px;
+  --r-heading-font: var(--r-main-font);
+  --r-heading-font-weight: 600;
+  --r-heading-line-height: 1.2;
+  --r-heading-letter-spacing: -0.01em;
+  --r-heading-text-transform: none;
+  --r-heading-text-shadow: none;
+  --r-heading1-text-shadow: none;
+  --r-heading-margin: 0 0 0.5em 0;
+  --r-heading1-size: 2.1em;
+  --r-heading2-size: 1.5em;
+  --r-heading3-size: 1.15em;
+  --r-heading4-size: 1em;
+  --r-block-margin: 0.7em;
+  --r-code-font: 'Source Code Pro', 'Fira Code', 'Cascadia Code', Consolas,
+    'Liberation Mono', monospace;
+}
+
+/* ══ Temas predefinidos ══════════════════════════════════════════════════ *
+ * Cada tema redefine solo los tokens que cambia; el resto lo hereda de los
+ * bloques de arriba. Van después a propósito: llevan dos atributos, así que
+ * ganan en especificidad a la paleta suelta.
+ *
+ * Los mismos colores están en `themes.js`, que es de donde salen los chips y
+ * el PDF. **Cambiar uno obliga a cambiar el otro.**
+ *
+ * El JS escribe siempre los dos atributos a la vez (`data-reveal-theme` y
+ * `data-reveal-palette`), de modo que basta con emparejarlos.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Serif: papel cálido, para teoría y lectura ─────────────────────────── */
+[data-reveal-theme='serif'] {
+  --r-main-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
+    'Times New Roman', serif;
+  --r-heading-font: var(--r-main-font);
+  --r-heading-letter-spacing: 0;
+}
+
+[data-reveal-theme='serif'][data-reveal-palette='light'] {
+  --r-background-color: #fbf8f1;
+  --r-main-color: #2e2a24;
+  --r-heading-color: #1f1b16;
+  --r-subheading-color: #6b6154;
+  --r-link-color: #a8551f;
+  --r-link-color-dark: #8a4318;
+  --r-link-color-hover: #c26a2f;
+  --r-selection-background-color: #e8dcc4;
+  --r-selection-color: #1f1b16;
+
+  --q-muted: #7d7264;
+  --q-rule: #e4dbc9;
+  --q-surface: #f3ece0;
+  --q-code-bg: #f5efe3;
+  --q-code-border: #e4dbc9;
+  --q-output-bg: #efe7d8;
+
+  --q-hl-comment: #97897a;
+  --q-hl-keyword: #9a4f7a;
+  --q-hl-string: #5a7d3a;
+  --q-hl-number: #a8621f;
+  --q-hl-function: #3c6a92;
+  --q-hl-builtin: #8a6d1f;
+  --q-hl-variable: #a8443a;
+}
+
+[data-reveal-theme='serif'][data-reveal-palette='dark'] {
+  --r-background-color: #221e1a;
+  --r-main-color: #ece5da;
+  --r-heading-color: #f7f1e6;
+  --r-subheading-color: #b3a693;
+  --r-link-color: #d9a05b;
+  --r-link-color-dark: #b8823f;
+  --r-link-color-hover: #ecb87b;
+  --r-selection-background-color: #4a3d2c;
+  --r-selection-color: #f7f1e6;
+
+  --q-muted: #a8998a;
+  --q-rule: #3a332b;
+  --q-surface: #2c2620;
+  --q-code-bg: #29231d;
+  --q-code-border: #3a332b;
+  --q-output-bg: #1e1a16;
+
+  --q-hl-comment: #8a7c6d;
+  --q-hl-keyword: #e0a3c4;
+  --q-hl-string: #a8c88a;
+  --q-hl-number: #e8b06a;
+  --q-hl-function: #8fb8dd;
+  --q-hl-builtin: #e0c579;
+  --q-hl-variable: #e08a7a;
+}
+
+/* ── Océano: azules y turquesa, cómodo con mucho código ─────────────────── */
+[data-reveal-theme='ocean'][data-reveal-palette='light'] {
+  --r-background-color: #f5f9fc;
+  --r-main-color: #1c2b36;
+  --r-heading-color: #0d3b52;
+  --r-subheading-color: #4a7189;
+  --r-link-color: #0e7490;
+  --r-link-color-dark: #0a5a70;
+  --r-link-color-hover: #1595b5;
+  --r-selection-background-color: #b8e0ec;
+  --r-selection-color: #0d3b52;
+
+  --q-muted: #5d7d90;
+  --q-rule: #d3e3ec;
+  --q-surface: #e7f1f6;
+  --q-code-bg: #eef5f9;
+  --q-code-border: #d3e3ec;
+  --q-output-bg: #e2edf3;
+
+  --q-hl-comment: #7b96a5;
+  --q-hl-keyword: #0f766e;
+  --q-hl-string: #1a7f5a;
+  --q-hl-number: #b45309;
+  --q-hl-function: #1d5f96;
+  --q-hl-builtin: #0e7490;
+  --q-hl-variable: #b53f5e;
+}
+
+[data-reveal-theme='ocean'][data-reveal-palette='dark'] {
+  --r-background-color: #0f1c26;
+  --r-main-color: #d7e3ea;
+  --r-heading-color: #e8f4fa;
+  --r-subheading-color: #8aa9bc;
+  --r-link-color: #4cc9d9;
+  --r-link-color-dark: #2ea3b3;
+  --r-link-color-hover: #7fdde9;
+  --r-selection-background-color: #1d4a5e;
+  --r-selection-color: #e8f4fa;
+
+  --q-muted: #7b98aa;
+  --q-rule: #24384a;
+  --q-surface: #172936;
+  --q-code-bg: #14232f;
+  --q-code-border: #24384a;
+  --q-output-bg: #0c1720;
+
+  --q-hl-comment: #6b8598;
+  --q-hl-keyword: #5eead4;
+  --q-hl-string: #86e0b0;
+  --q-hl-number: #f0b27a;
+  --q-hl-function: #7cc4f5;
+  --q-hl-builtin: #a5d8f0;
+  --q-hl-variable: #f2909f;
+}
+
+/* ── Alto contraste: aulas grandes o proyectores pobres ─────────────────── */
+[data-reveal-theme='contrast'] {
+  --r-main-font-size: 36px;
+  --r-heading-font-weight: 700;
+}
+
+[data-reveal-theme='contrast'][data-reveal-palette='light'] {
+  --r-background-color: #ffffff;
+  --r-main-color: #000000;
+  --r-heading-color: #000000;
+  --r-subheading-color: #333333;
+  --r-link-color: #0033cc;
+  --r-link-color-dark: #002499;
+  --r-link-color-hover: #1a4ee0;
+  --r-selection-background-color: #ffe066;
+  --r-selection-color: #000000;
+
+  --q-muted: #444444;
+  --q-rule: #000000;
+  --q-surface: #f0f0f0;
+  --q-code-bg: #f4f4f4;
+  --q-code-border: #000000;
+  --q-output-bg: #e8e8e8;
+
+  --q-hl-comment: #555555;
+  --q-hl-keyword: #7a0080;
+  --q-hl-string: #005c1f;
+  --q-hl-number: #8a3d00;
+  --q-hl-function: #00308f;
+  --q-hl-builtin: #6b4a00;
+  --q-hl-variable: #a30000;
+}
+
+[data-reveal-theme='contrast'][data-reveal-palette='dark'] {
+  --r-background-color: #000000;
+  --r-main-color: #ffffff;
+  --r-heading-color: #ffffff;
+  --r-subheading-color: #d0d0d0;
+  --r-link-color: #66b3ff;
+  --r-link-color-dark: #3d94ee;
+  --r-link-color-hover: #99ccff;
+  --r-selection-background-color: #004a99;
+  --r-selection-color: #ffffff;
+
+  --q-muted: #c0c0c0;
+  --q-rule: #ffffff;
+  --q-surface: #1a1a1a;
+  --q-code-bg: #141414;
+  --q-code-border: #ffffff;
+  --q-output-bg: #0a0a0a;
+
+  --q-hl-comment: #a0a0a0;
+  --q-hl-keyword: #ff9ef0;
+  --q-hl-string: #8dff9e;
+  --q-hl-number: #ffc46b;
+  --q-hl-function: #9ecbff;
+  --q-hl-builtin: #ffe066;
+  --q-hl-variable: #ff9c8f;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+.reveal-viewport {
+  background-color: var(--r-background-color);
+}
+
+.reveal {
+  font-family: var(--r-main-font);
+  font-size: var(--r-main-font-size);
+  color: var(--r-main-color);
+
+  /* El contenido de una clase respira mejor arriba que centrado. */
+  .slides section {
+    text-align: left;
+  }
+
+  ::selection {
+    background: var(--r-selection-background-color);
+    color: var(--r-selection-color);
+    text-shadow: none;
+  }
+
+  /* ── Encabezados ──────────────────────────────────────────────────────── */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--r-heading-font);
+    font-weight: var(--r-heading-font-weight);
+    line-height: var(--r-heading-line-height);
+    letter-spacing: var(--r-heading-letter-spacing);
+    text-transform: var(--r-heading-text-transform);
+    text-shadow: none;
+    word-wrap: break-word;
+    color: var(--r-heading-color);
+  }
+
+  h1 { font-size: var(--r-heading1-size); }
+  h2 { font-size: var(--r-heading2-size); }
+  h3 { font-size: var(--r-heading3-size); color: var(--r-subheading-color); }
+  h4 { font-size: var(--r-heading4-size); color: var(--r-subheading-color); }
+
+  /* Título de diapositiva: filete inferior, como Quarto. */
+  section > h2:first-child,
+  section > h1:first-child {
+    margin-bottom: 0.6em;
+    padding-bottom: 0.25em;
+    border-bottom: 2px solid var(--q-rule);
+  }
+
+  /* Diapositiva de sección: sin filete, todo centrado. */
+  section.quarto-section {
+    text-align: center;
+
+    > h1 {
+      border-bottom: none;
+      margin-bottom: 0.3em;
+    }
+  }
+
+  /* `[texto]{.subtitle}` — subtítulo de una diapositiva de sección. */
+  .subtitle {
+    display: block;
+    color: var(--r-subheading-color);
+    font-size: 0.75em;
+    font-weight: 400;
+  }
+
+  /* ── Texto y listas ───────────────────────────────────────────────────── */
+  p {
+    margin: var(--r-block-margin) 0;
+    line-height: 1.4;
+  }
+
+  a {
+    color: var(--r-link-color);
+    text-decoration: none;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--r-link-color-hover);
+    }
+  }
+
+  strong,
+  b {
+    font-weight: 600;
+    color: var(--r-heading-color);
+  }
+
+  ul,
+  ol {
+    display: block;
+    margin-left: 1.1em;
+    line-height: 1.45;
+  }
+
+  li {
+    margin-bottom: 0.35em;
+
+    /* Las listas anidadas se compactan: suelen ser matices, no puntos nuevos. */
+    ul,
+    ol {
+      font-size: 0.9em;
+      margin-top: 0.3em;
+    }
+  }
+
+  ul li::marker {
+    color: var(--r-link-color);
+  }
+
+  ol li::marker {
+    color: var(--q-muted);
+    font-weight: 600;
+  }
+
+  blockquote {
+    display: block;
+    width: 100%;
+    margin: var(--r-block-margin) 0;
+    padding: 0.5em 1em;
+    background: var(--q-surface);
+    border-left: 4px solid var(--r-link-color);
+    border-radius: 0 4px 4px 0;
+    box-shadow: none;
+    font-style: normal;
+    color: var(--r-main-color);
+
+    p:first-child { margin-top: 0; }
+    p:last-child { margin-bottom: 0; }
+  }
+
+  /* ── Código ───────────────────────────────────────────────────────────── */
+  code {
+    font-family: var(--r-code-font);
+    font-size: 0.85em;
+  }
+
+  /* Código en línea */
+  :not(pre) > code {
+    background: var(--q-code-bg);
+    border: 1px solid var(--q-code-border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    color: var(--r-main-color);
+  }
+
+  pre {
+    display: block;
+    width: 100%;
+    margin: var(--r-block-margin) 0;
+    font-size: 0.6em;
+    line-height: 1.35;
+    box-shadow: none;
+
+    code {
+      display: block;
+      overflow: auto;
+      /* En vh porque a pantalla completa el deck ocupa la ventana. La vista
+         previa del editor, que va escalada, sustituye el tope por uno en px. */
+      max-height: var(--q-code-max-height, 70vh);
+      padding: 0.8em 1em;
+      background: var(--q-code-bg);
+      border: 1px solid var(--q-code-border);
+      border-radius: 6px;
+      font-size: 1em;
+      word-wrap: normal;
+      tab-size: 4;
+    }
+  }
+
+  /* Salida de una celda: `::: {.cell-output}`. Se pega al bloque anterior. */
+  .cell-output {
+    margin: -0.4em 0 var(--r-block-margin) 0;
+    padding: 0.7em 1em;
+    background: var(--q-output-bg);
+    border: 1px solid var(--q-code-border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    font-family: var(--r-code-font);
+    font-size: 0.6em;
+    line-height: 1.35;
+    color: var(--q-muted);
+    white-space: pre-wrap;
+
+    pre,
+    pre code {
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      font-size: 1em;
+    }
+  }
+
+  /* Tokens de highlight.js */
+  .hljs-comment,
+  .hljs-quote { color: var(--q-hl-comment); font-style: italic; }
+
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-literal,
+  .hljs-doctag,
+  .hljs-formula { color: var(--q-hl-keyword); }
+
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition,
+  .hljs-attribute,
+  .hljs-meta .hljs-string { color: var(--q-hl-string); }
+
+  .hljs-number,
+  .hljs-symbol,
+  .hljs-bullet,
+  .hljs-link,
+  .hljs-meta,
+  .hljs-selector-id { color: var(--q-hl-number); }
+
+  .hljs-title,
+  .hljs-section,
+  .hljs-title.function_ { color: var(--q-hl-function); }
+
+  .hljs-built_in,
+  .hljs-class .hljs-title,
+  .hljs-type,
+  .hljs-params { color: var(--q-hl-builtin); }
+
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-name,
+  .hljs-selector-class,
+  .hljs-attr,
+  .hljs-deletion { color: var(--q-hl-variable); }
+
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 600; }
+
+  /* Resaltado progresivo de líneas (`code-line-numbers`) */
+  .hljs .highlight-line {
+    background: rgba(127, 127, 127, 0.16);
+  }
+
+  /* ── Imágenes ─────────────────────────────────────────────────────────── */
+  section img {
+    max-width: 100%;
+    max-height: var(--q-media-max-height, 62vh);
+    margin: var(--r-block-margin) auto;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    box-shadow: none;
+    object-fit: contain;
+  }
+
+  /* Una imagen sola en su párrafo se centra. */
+  p > img:only-child {
+    display: block;
+  }
+
+  figure {
+    margin: var(--r-block-margin) 0;
+    text-align: center;
+  }
+
+  figcaption {
+    margin-top: 0.3em;
+    color: var(--q-muted);
+    font-size: 0.65em;
+  }
+
+  /* ── Tablas de resultados ─────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    margin: var(--r-block-margin) 0;
+    border-collapse: collapse;
+    font-size: 0.7em;
+
+    th,
+    td {
+      padding: 0.35em 0.7em;
+      border: none;
+      border-bottom: 1px solid var(--q-rule);
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--r-heading-color);
+      border-bottom: 2px solid var(--q-rule);
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Las columnas numéricas se alinean a la derecha para comparar magnitudes. */
+    td.numeric,
+    th.numeric {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  /* ── Columnas: `::: {.columns}` + `::: {.column}` ─────────────────────── */
+  .columns {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5em;
+
+    > .column {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  /* ── Callouts ─────────────────────────────────────────────────────────── */
+  .callout {
+    margin: var(--r-block-margin) 0;
+    padding: 0.6em 0.9em;
+    background: var(--q-surface);
+    border-left: 5px solid var(--q-callout-accent, var(--r-link-color));
+    border-radius: 0 6px 6px 0;
+    font-size: 0.85em;
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+
+    .callout-title {
+      display: block;
+      margin-bottom: 0.3em;
+      color: var(--q-callout-accent, var(--r-link-color));
+      font-weight: 600;
+    }
+  }
+
+  .callout-note { --q-callout-accent: #2a76dd; }
+  .callout-tip { --q-callout-accent: #1a8a44; }
+  .callout-important { --q-callout-accent: #d13b3b; }
+  .callout-warning { --q-callout-accent: #d98c1f; }
+  .callout-caution { --q-callout-accent: #c2410c; }
+
+  /* ── Ecuaciones (KaTeX) ───────────────────────────────────────────────── */
+  .katex {
+    font-size: 1.05em;
+    color: var(--r-main-color);
+  }
+
+  .katex-display {
+    margin: 0.8em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.2em 0;
+  }
+
+  /* ── Utilidades de tamaño, como en Quarto ─────────────────────────────── */
+  .smaller { font-size: 0.8em; }
+  .larger { font-size: 1.2em; }
+  .muted { color: var(--q-muted); }
+  .center { text-align: center; }
+
+  /* ── Cromo de Reveal ──────────────────────────────────────────────────── */
+  .controls {
+    color: var(--r-link-color);
+  }
+
+  .progress {
+    height: 3px;
+    color: var(--r-link-color);
+    background: rgba(127, 127, 127, 0.2);
+  }
+
+  .slide-number {
+    background: transparent;
+    color: var(--q-muted);
+    font-size: 0.5em;
+  }
+}
+
+/* ── Portada ────────────────────────────────────────────────────────────── */
+/* Bloque centrado horizontalmente y anclado arriba: logo, título, subtítulo y
+   autor en ese orden, sin repartir el espacio sobrante entre ellos. */
+/* Se cualifica con `.slides section` para ganarle en especificidad al
+   `text-align: left` de la base, que si no alinea la portada a la izquierda.
+   El logo se ancla arriba y el texto a media diapositiva: así el título cae
+   siempre a la misma altura, sea cual sea lo alto que sea el logo. */
+.reveal .slides section.quarto-cover {
+  position: relative;
+  height: 100%;
+  text-align: center;
+
+  .cover-logo {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    max-height: 110px;
+    max-width: 55%;
+    margin: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    object-fit: contain;
+  }
+
+  .cover-text {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+  }
+
+  h1 {
+    margin: 0 0 0.25em 0;
+    border-bottom: none;
+  }
+
+  .cover-subtitle {
+    margin: 0;
+    color: var(--r-subheading-color);
+    font-size: 1em;
+    font-weight: 400;
+  }
+
+  .cover-author {
+    margin-top: 0.9em;
+    color: var(--q-muted);
+    font-size: 0.65em;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* ── Impresión / export a PDF ───────────────────────────────────────────── */
+@media print {
+  .reveal pre code {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .reveal section img {
+    max-height: 55vh;
+  }
+}

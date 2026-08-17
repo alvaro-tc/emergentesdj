@@ -1,43 +1,137 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import {
     Grid, Card, CardContent, Typography, Button, TextField, MenuItem,
-    Select, FormControl, InputLabel, Box, Chip, Divider, Alert, Snackbar,
-    Paper, CircularProgress
+    Select, FormControl, InputLabel, FormHelperText, Box, Chip, Divider,
+    Alert, Snackbar, CircularProgress, Tooltip
 } from '@mui/material';
-import { IconArrowLeft, IconDeviceFloppy, IconPresentation, IconPhoto } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceFloppy, IconPresentation, IconPhoto, IconUpload, IconTrash } from '@tabler/icons-react';
 import axios from 'axios';
 import config from '../../../config';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
+import { countSlides } from './presentation/qmd';
+import {
+    DEFAULT_PALETTE, DEFAULT_THEME, PALETTE_LABELS, THEME_LIST, getThemeColors
+} from './presentation/themes';
 
-const THEMES = [
-    { value: 'default',   label: 'Default',   bg: '#1c1c1c', fg: '#fff' },
-    { value: 'ocean',     label: 'Ocean',     bg: '#1a6fa0', fg: '#fff' },
-    { value: 'forest',    label: 'Forest',    bg: '#3d6b3f', fg: '#fff' },
-    { value: 'sunset',    label: 'Sunset',    bg: '#8b3a3a', fg: '#e8d5b7' },
-    { value: 'corporate', label: 'Corporate', bg: '#ffffff', fg: '#222' },
-    { value: 'neon',      label: 'Neon',      bg: '#0d0d0d', fg: '#a855f7' },
+// CodeMirror pesa lo suyo y solo hace falta al editar.
+const QmdEditor = lazy(() => import('./presentation/QmdEditor'));
+// Reveal + KaTeX + highlight.js: todo el peso del deck, solo para previsualizar.
+const DeckPreview = lazy(() => import('./presentation/DeckPreview'));
+
+/** Los cuatro overrides de color: título y subtítulo, por cada paleta. */
+const COLOR_FIELDS = [
+    { field: 'heading_color_dark', label: 'Título · oscuro', palette: 'dark' },
+    { field: 'heading_color_light', label: 'Título · claro', palette: 'light' },
+    { field: 'subheading_color_dark', label: 'Subtítulo · oscuro', palette: 'dark' },
+    { field: 'subheading_color_light', label: 'Subtítulo · claro', palette: 'light' }
 ];
 
-const PLACEHOLDER_CONTENT = `## Primera Diapositiva
+const PLACEHOLDER_CONTENT = `# Tema de la clase
+[Un subtítulo opcional]{.subtitle}
 
-Escribe el contenido de esta diapositiva aquí.
+## Primera diapositiva
 
-- Punto importante 1
-- Punto importante 2
+Cada \`##\` abre una diapositiva nueva.
 
----
+- Punto importante
+- Otro punto
 
-## Segunda Diapositiva
+## Un ejemplo en Python
 
-Usa \`---\` para separar diapositivas.
+\`\`\`{.python code-line-numbers="1|2-3"}
+def promedio(notas):
+    total = sum(notas)
+    return total / len(notas)
+\`\`\`
 
----
+::: {.cell-output}
+7.5
+:::
 
-## Tercera Diapositiva
+## Dos columnas
 
-Soporta **negrita**, *cursiva* y \`código\`.
+:::: {.columns}
+::: {.column width="50%"}
+Texto a la izquierda.
+:::
+::: {.column width="50%"}
+![](https://vgy.me/ejemplo.png)
+:::
+::::
 `;
+
+/** Extensiones que acepta el endpoint de subida (`upload-logo`). */
+const LOGO_ACCEPT = '.png,.jpg,.jpeg,.webp,.svg,.gif';
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Un logo de la portada: se puede pegar una URL o subir un archivo.
+ *
+ * Ambos caminos acaban en el mismo campo de texto, porque el deck y el export a
+ * PDF solo saben de URLs; subir un archivo es únicamente otra forma de
+ * conseguir una.
+ */
+const LogoField = ({ label, value, onChange, onFile, onClear, uploading, broken, onBroken, previewBg }) => {
+    const inputRef = React.useRef(null);
+
+    const handlePick = (event) => {
+        const file = event.target.files?.[0];
+        // Se limpia siempre: si no, volver a elegir el mismo archivo no dispara `change`.
+        event.target.value = '';
+        if (file) onFile(file);
+    };
+
+    return (
+        <>
+            <TextField
+                fullWidth size="small"
+                label={label}
+                value={value}
+                onChange={onChange}
+                placeholder="Pega una URL o sube un archivo"
+                InputProps={{ startAdornment: <IconPhoto size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
+            />
+            <Box display="flex" gap={1} mt={0.8}>
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept={LOGO_ACCEPT}
+                    hidden
+                    onChange={handlePick}
+                />
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={uploading ? <CircularProgress size={14} color="inherit" /> : <IconUpload size={16} />}
+                    onClick={() => inputRef.current?.click()}
+                    disabled={uploading}
+                >
+                    {uploading ? 'Subiendo...' : 'Subir imagen'}
+                </Button>
+                {value && (
+                    <Button size="small" color="inherit" startIcon={<IconTrash size={16} />} onClick={onClear}>
+                        Quitar
+                    </Button>
+                )}
+            </Box>
+            {value && !broken && (
+                <Box mt={1} display="flex" justifyContent="center"
+                    sx={{ bgcolor: previewBg, borderRadius: 1, p: 1.5 }}>
+                    <img
+                        src={value}
+                        alt={`${label} preview`}
+                        onError={onBroken}
+                        style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }}
+                    />
+                </Box>
+            )}
+            {value && broken && (
+                <Alert severity="warning" sx={{ mt: 1, py: 0 }}>URL de imagen no válida o inaccesible.</Alert>
+            )}
+        </>
+    );
+};
 
 const PresentationForm = () => {
     const { id } = useParams();
@@ -59,15 +153,24 @@ const PresentationForm = () => {
     const [logoError, setLogoError] = useState(false);
 
     const [logoOscuroError, setLogoOscuroError] = useState(false);
+    // Campo cuyo logo se está subiendo ahora mismo, o `null`.
+    const [uploading, setUploading] = useState(null);
 
     const [form, setForm] = useState({
+        // El curso activo solo sugiere la materia; se puede cambiar libremente,
+        // porque una presentación cuelga de la materia y no del curso.
         subject: activeCourse?.subject || '',
         title: '',
         subtitle: '',
         autor: '',
         logo_url: '',
         logo_oscuro: '',
-        theme: 'default',
+        theme: DEFAULT_THEME,
+        palette: DEFAULT_PALETTE,
+        heading_color_light: '',
+        heading_color_dark: '',
+        subheading_color_light: '',
+        subheading_color_dark: '',
         content: PLACEHOLDER_CONTENT,
     });
 
@@ -93,7 +196,12 @@ const PresentationForm = () => {
                     autor: p.autor || '',
                     logo_url: p.logo_url || '',
                     logo_oscuro: p.logo_oscuro || '',
-                    theme: p.theme || 'default',
+                    theme: p.theme || DEFAULT_THEME,
+                    palette: p.palette || DEFAULT_PALETTE,
+                    heading_color_light: p.heading_color_light || '',
+                    heading_color_dark: p.heading_color_dark || '',
+                    subheading_color_light: p.subheading_color_light || '',
+                    subheading_color_dark: p.subheading_color_dark || '',
                     content: p.content || '',
                 });
             })
@@ -107,29 +215,58 @@ const PresentationForm = () => {
         if (field === 'logo_oscuro') setLogoOscuroError(false);
     };
 
-    // Light themes use logo_oscuro; dark themes use logo_url
-    const LIGHT_THEMES = ['corporate'];
-    const activeLogo = LIGHT_THEMES.includes(form.theme)
-        ? (form.logo_oscuro || form.logo_url)
-        : (form.logo_url || form.logo_oscuro);
-    const activeLogoError = LIGHT_THEMES.includes(form.theme)
-        ? (form.logo_oscuro ? logoOscuroError : logoError)
-        : (form.logo_url ? logoError : logoOscuroError);
-
-    const slideCount = () => {
-        const extra = (form.content || '').split('---').filter(s => s.trim()).length;
-        return 1 + extra; // +1 cover
+    /** Escribe un logo y reinicia su marca de "imagen rota". */
+    const setLogoField = (field, url) => {
+        setForm(f => ({ ...f, [field]: url }));
+        if (field === 'logo_url') setLogoError(false);
+        else setLogoOscuroError(false);
     };
+
+    /**
+     * Sube el archivo y deja su URL en el campo.
+     *
+     * El logo se guarda en cuanto se guarda la presentación: la subida es
+     * independiente, así que la imagen ya vive en el servidor aunque después se
+     * abandone el formulario.
+     */
+    const uploadLogo = async (field, file) => {
+        if (file.size > MAX_LOGO_BYTES) {
+            setSnackbar({ open: true, message: 'El logo no puede superar los 2 MB.', severity: 'error' });
+            return;
+        }
+        setAuthHeader();
+        setUploading(field);
+        try {
+            const data = new FormData();
+            data.append('file', file);
+            const res = await axios.post(`${config.API_SERVER}presentations/upload-logo/`, data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setLogoField(field, res.data.url);
+        } catch (err) {
+            const msg = err.response?.data?.detail || 'No se pudo subir la imagen.';
+            setSnackbar({ open: true, message: msg, severity: 'error' });
+        } finally {
+            setUploading(null);
+        }
+    };
+
+    // Portada + una diapositiva por cada `#` o `##`, igual que el viewer.
+    const slides = 1 + countSlides(form.content);
 
     const handleSave = async () => {
         if (!form.title.trim()) {
             setSnackbar({ open: true, message: 'El título es obligatorio.', severity: 'error' });
             return;
         }
+        if (!form.subject) {
+            setSnackbar({ open: true, message: 'Selecciona la materia a la que pertenece.', severity: 'error' });
+            return;
+        }
         setAuthHeader();
         setSaving(true);
         try {
-            const payload = { ...form, subject: form.subject || null };
+            const payload = { ...form };
             if (isEditing) {
                 await axios.put(`${config.API_SERVER}presentations/${id}/`, payload);
             } else {
@@ -144,8 +281,6 @@ const PresentationForm = () => {
             setSaving(false);
         }
     };
-
-    const selectedTheme = THEMES.find(t => t.value === form.theme) || THEMES[0];
 
     if (loading) return (
         <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>
@@ -204,18 +339,22 @@ const PresentationForm = () => {
 
                         <Grid container spacing={2}>
                             <Grid size={12}>
-                                <FormControl fullWidth size="small">
-                                    <InputLabel>Materia (Opcional)</InputLabel>
+                                <FormControl fullWidth size="small" error={!form.subject}>
+                                    <InputLabel>Materia *</InputLabel>
                                     <Select
                                         value={form.subject}
                                         onChange={handleChange('subject')}
-                                        label="Materia (Opcional)"
+                                        label="Materia *"
                                     >
-                                        <MenuItem value=""><em>Sin asignar</em></MenuItem>
                                         {subjects.map(s => (
                                             <MenuItem key={s.id} value={s.id}>{s.name} ({s.code})</MenuItem>
                                         ))}
                                     </Select>
+                                    <FormHelperText>
+                                        {form.subject
+                                            ? 'La presentación se reutiliza en todos los cursos de esta materia.'
+                                            : 'Selecciona la materia a la que pertenece.'}
+                                    </FormHelperText>
                                 </FormControl>
                             </Grid>
 
@@ -248,158 +387,189 @@ const PresentationForm = () => {
                             </Grid>
 
                             <Grid size={12}>
-                                <TextField
-                                    fullWidth size="small"
+                                <LogoField
                                     label="Logo claro (temas oscuros)"
                                     value={form.logo_url}
                                     onChange={handleChange('logo_url')}
-                                    InputProps={{ startAdornment: <IconPhoto size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
+                                    onFile={(file) => uploadLogo('logo_url', file)}
+                                    onClear={() => setLogoField('logo_url', '')}
+                                    uploading={uploading === 'logo_url'}
+                                    broken={logoError}
+                                    onBroken={() => setLogoError(true)}
+                                    previewBg="#1c1c1c"
                                 />
-                                {form.logo_url && !logoError && (
-                                    <Box mt={1} display="flex" justifyContent="center"
-                                        sx={{ bgcolor: '#1c1c1c', borderRadius: 1, p: 1.5 }}>
-                                        <img
-                                            src={form.logo_url}
-                                            alt="logo preview"
-                                            onError={() => setLogoError(true)}
-                                            style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }}
-                                        />
-                                    </Box>
-                                )}
-                                {form.logo_url && logoError && (
-                                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>URL de imagen no válida o inaccesible.</Alert>
-                                )}
                             </Grid>
 
                             <Grid size={12}>
-                                <TextField
-                                    fullWidth size="small"
+                                <LogoField
                                     label="Logo oscuro (temas claros)"
                                     value={form.logo_oscuro}
                                     onChange={handleChange('logo_oscuro')}
-                                    InputProps={{ startAdornment: <IconPhoto size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
+                                    onFile={(file) => uploadLogo('logo_oscuro', file)}
+                                    onClear={() => setLogoField('logo_oscuro', '')}
+                                    uploading={uploading === 'logo_oscuro'}
+                                    broken={logoOscuroError}
+                                    onBroken={() => setLogoOscuroError(true)}
+                                    previewBg="#f5f5f5"
                                 />
-                                {form.logo_oscuro && !logoOscuroError && (
-                                    <Box mt={1} display="flex" justifyContent="center"
-                                        sx={{ bgcolor: '#f5f5f5', borderRadius: 1, p: 1.5 }}>
-                                        <img
-                                            src={form.logo_oscuro}
-                                            alt="logo oscuro preview"
-                                            onError={() => setLogoOscuroError(true)}
-                                            style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }}
-                                        />
-                                    </Box>
-                                )}
-                                {form.logo_oscuro && logoOscuroError && (
-                                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>URL de imagen no válida o inaccesible.</Alert>
-                                )}
                             </Grid>
 
                             <Grid size={12}>
                                 <Typography variant="subtitle2" gutterBottom>Tema</Typography>
                                 <Grid container spacing={1}>
-                                    {THEMES.map(t => (
-                                        <Grid key={t.value}>
-                                            <Box
-                                                onClick={() => setForm(f => ({ ...f, theme: t.value }))}
-                                                sx={{
-                                                    cursor: 'pointer',
-                                                    px: 1.5, py: 0.8,
-                                                    borderRadius: 1,
-                                                    bgcolor: t.bg,
-                                                    color: t.fg,
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600,
-                                                    border: form.theme === t.value ? '2px solid' : '2px solid transparent',
-                                                    borderColor: form.theme === t.value ? 'primary.main' : 'transparent',
-                                                    boxShadow: form.theme === t.value ? 3 : 1,
-                                                    transition: 'all 0.15s',
-                                                    userSelect: 'none',
-                                                }}
-                                            >
-                                                {t.label}
-                                            </Box>
+                                    {THEME_LIST.map((t) => {
+                                        const sample = t.palettes[form.palette] || t.palettes[DEFAULT_PALETTE];
+                                        const selected = form.theme === t.id;
+                                        return (
+                                            <Grid size={6} key={t.id}>
+                                                <Tooltip title={t.description}>
+                                                    <Box
+                                                        onClick={() => setForm(f => ({ ...f, theme: t.id }))}
+                                                        sx={{
+                                                            cursor: 'pointer',
+                                                            p: 1,
+                                                            borderRadius: 1,
+                                                            bgcolor: sample.bg,
+                                                            border: '2px solid',
+                                                            borderColor: selected ? 'primary.main' : 'divider',
+                                                            boxShadow: selected ? 3 : 0,
+                                                            transition: 'all 0.15s',
+                                                            userSelect: 'none',
+                                                        }}
+                                                    >
+                                                        <Typography
+                                                            sx={{ color: sample.heading, fontSize: '0.78rem', fontWeight: 700, lineHeight: 1.2 }}
+                                                        >
+                                                            {t.label}
+                                                        </Typography>
+                                                        <Typography sx={{ color: sample.subheading, fontSize: '0.6rem' }}>
+                                                            Subtítulo
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', gap: 0.4, mt: 0.6 }}>
+                                                            {[sample.main, sample.accent, sample.muted].map((c) => (
+                                                                <Box key={c} sx={{ width: 12, height: 6, borderRadius: 0.5, bgcolor: c }} />
+                                                            ))}
+                                                        </Box>
+                                                    </Box>
+                                                </Tooltip>
+                                            </Grid>
+                                        );
+                                    })}
+                                </Grid>
+                            </Grid>
+
+                            <Grid size={12}>
+                                <Typography variant="subtitle2" gutterBottom>Paleta inicial</Typography>
+                                <Grid container spacing={1}>
+                                    {Object.entries(PALETTE_LABELS).map(([value, label]) => {
+                                        const sample = getThemeColors(form.theme, value);
+                                        return (
+                                            <Grid key={value}>
+                                                <Box
+                                                    onClick={() => setForm(f => ({ ...f, palette: value }))}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        px: 1.5, py: 0.8,
+                                                        borderRadius: 1,
+                                                        bgcolor: sample.bg,
+                                                        color: sample.heading,
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        border: '2px solid',
+                                                        borderColor: form.palette === value ? 'primary.main' : 'divider',
+                                                        boxShadow: form.palette === value ? 3 : 0,
+                                                        transition: 'all 0.15s',
+                                                        userSelect: 'none',
+                                                    }}
+                                                >
+                                                    {label}
+                                                </Box>
+                                            </Grid>
+                                        );
+                                    })}
+                                </Grid>
+                                <Typography variant="caption" color="textSecondary" display="block" mt={0.5}>
+                                    Con la que se abre la presentación. Durante la exposición se
+                                    alterna con la tecla <strong>T</strong>.
+                                </Typography>
+                            </Grid>
+
+                            <Grid size={12}>
+                                <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+                                    Colores de títulos
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary" display="block" mb={1}>
+                                    Vacío usa el color del tema. Cada paleta lleva el suyo: un mismo
+                                    tono no funciona sobre fondo claro y oscuro a la vez.
+                                </Typography>
+                                <Grid container spacing={1}>
+                                    {COLOR_FIELDS.map(({ field, label, palette }) => (
+                                        <Grid size={6} key={field}>
+                                            <TextField
+                                                fullWidth size="small" type="color"
+                                                label={label}
+                                                value={form[field] || getThemeColors(form.theme, palette)[
+                                                    field.startsWith('heading') ? 'heading' : 'subheading'
+                                                ]}
+                                                onChange={handleChange(field)}
+                                                InputLabelProps={{ shrink: true }}
+                                                sx={{ '& input': { height: 28, cursor: 'pointer', p: 0.5 } }}
+                                            />
+                                            {form[field] && (
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => setForm(f => ({ ...f, [field]: '' }))}
+                                                    sx={{ fontSize: '0.65rem', p: 0, minWidth: 0, mt: 0.3 }}
+                                                >
+                                                    Restablecer
+                                                </Button>
+                                            )}
                                         </Grid>
                                     ))}
                                 </Grid>
                             </Grid>
 
-                            {/* Cover preview */}
-                            <Grid size={12}>
-                                <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>Vista previa de portada</Typography>
-                                <Box sx={{
-                                    bgcolor: selectedTheme.bg, color: selectedTheme.fg,
-                                    borderRadius: 2, textAlign: 'center',
-                                    minHeight: 160, display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'space-between',
-                                    p: 2, gap: 0,
-                                }}>
-                                    {/* Logo - top */}
-                                    <Box sx={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {activeLogo && !activeLogoError && (
-                                            <img src={activeLogo} alt="logo"
-                                                style={{ maxHeight: 44, maxWidth: '80%', objectFit: 'contain' }} />
-                                        )}
-                                    </Box>
-                                    {/* Title + Subtitle - center */}
-                                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.5, py: 1 }}>
-                                        <Typography variant="h5" fontWeight={700} sx={{ color: selectedTheme.fg, lineHeight: 1.2 }}>
-                                            {form.title || 'Título de la presentación'}
-                                        </Typography>
-                                        {form.subtitle && (
-                                            <Typography variant="body2" sx={{ color: selectedTheme.fg, opacity: 0.8 }}>
-                                                {form.subtitle}
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                    {/* Author - bottom */}
-                                    <Box sx={{ minHeight: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {form.autor && (
-                                            <Typography variant="caption" sx={{ color: selectedTheme.fg, opacity: 0.75 }}>
-                                                {form.autor}
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                </Box>
-                            </Grid>
                         </Grid>
                     </CardContent>
                 </Card>
             </Grid>
 
-            {/* Right column: markdown editor */}
+            {/* Right column: vista previa + editor .qmd */}
             <Grid size={{ xs: 12, lg: 8 }}>
-                <Card sx={{ height: '100%' }}>
+                <Card sx={{ mb: 3 }}>
+                    <CardContent>
+                        <Suspense fallback={
+                            <Box sx={{ aspectRatio: '16 / 9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CircularProgress />
+                            </Box>
+                        }>
+                            <DeckPreview presentation={form} />
+                        </Suspense>
+                    </CardContent>
+                </Card>
+
+                <Card>
                     <CardContent>
                         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                            <Typography variant="h5" fontWeight={600}>Contenido (Markdown)</Typography>
+                            <Typography variant="h5" fontWeight={600}>Contenido (Quarto)</Typography>
                             <Chip
                                 size="small"
-                                label={`${slideCount()} slide${slideCount() !== 1 ? 's' : ''}`}
+                                label={`${slides} slide${slides !== 1 ? 's' : ''}`}
                                 color="primary"
                                 variant="outlined"
                             />
                         </Box>
                         <Typography variant="caption" color="textSecondary" display="block" mb={1.5}>
-                            Use <strong>---</strong> en una línea sola para separar diapositivas. La portada (logo + título + subtítulo) se genera automáticamente.
+                            Cada <strong>##</strong> abre una diapositiva y cada <strong>#</strong> una de
+                            sección. La portada (logo + título + subtítulo) se genera automáticamente.
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={28}
-                            value={form.content}
-                            onChange={handleChange('content')}
-                            variant="outlined"
-                            placeholder={PLACEHOLDER_CONTENT}
-                            inputProps={{
-                                style: {
-                                    fontFamily: '"Fira Code", "Cascadia Code", "Consolas", monospace',
-                                    fontSize: '0.85rem',
-                                    lineHeight: 1.6,
-                                }
-                            }}
-                        />
+                        <Suspense fallback={<Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>}>
+                            <QmdEditor
+                                value={form.content}
+                                onChange={(content) => setForm(f => ({ ...f, content }))}
+                            />
+                        </Suspense>
                     </CardContent>
                 </Card>
             </Grid>

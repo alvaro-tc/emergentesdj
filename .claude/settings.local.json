@@ -51,7 +51,16 @@
       "Bash(sudo apt-get install -y libnspr4 libnss3)",
       "Bash(mkdir -p /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/commands)",
       "Bash(touch /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/__init__.py /home/administrador/desapython/emergentesdj/api-server-django/api/user/management/commands/__init__.py)",
-      "Bash(xargs ls -la)"
+      "Bash(xargs ls -la)",
+      "Bash(venv/bin/python manage.py makemigrations school)",
+      "Bash(venv/bin/python -c ' *)",
+      "Bash(venv/bin/python manage.py migrate school)",
+      "Bash(grep -o \"\\\\.reveal-viewport[^{,]*\" dist/reveal.css)",
+      "Bash(npx eslint *)",
+      "Bash(venv/bin/python manage.py test api)",
+      "Bash(awk '/class Presentation/,/^class [A-Z]/' api-server-django/api/school/models.py)",
+      "Bash(python -c \"import django;print\\(django.__version__\\)\")",
+      "Bash(venv/bin/python manage.py showmigrations school)"
     ]
   },
   "enabledPlugins": {

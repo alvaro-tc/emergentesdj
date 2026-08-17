@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Grid, Card, CardContent, Typography, Button, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Paper, IconButton,
     Chip, Tooltip, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
-    Snackbar
+    Snackbar, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import { IconPlus, IconEdit, IconTrash, IconPresentation, IconAlertTriangle, IconFileTypePdf } from '@tabler/icons-react';
 import axios from 'axios';
@@ -11,14 +11,17 @@ import jsPDF from 'jspdf';
 import config from '../../../config';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { countSlides, splitSlides } from './presentation/qmd';
+import { PALETTE_LABELS, THEMES, getThemeColors, hexToRgb, pickLogo } from './presentation/themes';
 
-const THEME_LABELS = {
-    default:   { label: 'Default',   color: '#555' },
-    ocean:     { label: 'Ocean',     color: '#0ea5e9' },
-    forest:    { label: 'Forest',    color: '#22c55e' },
-    sunset:    { label: 'Sunset',    color: '#f97316' },
-    corporate: { label: 'Corporate', color: '#6366f1' },
-    neon:      { label: 'Neon',      color: '#a855f7' },
+/** Colores de una presentación en el formato `[r, g, b]` que consume jsPDF. */
+const pdfColors = (presentation) => {
+    const colors = getThemeColors(presentation.theme, presentation.palette);
+    return {
+        bg: hexToRgb(colors.bg),
+        fg: hexToRgb(colors.heading),
+        muted: hexToRgb(colors.muted),
+    };
 };
 
 const Presentations = () => {
@@ -27,27 +30,42 @@ const Presentations = () => {
     const navigate = useNavigate();
 
     const [presentations, setPresentations] = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    const subjectId = activeCourse?.subject;
+    // Las presentaciones cuelgan de la materia, no del curso: el curso activo
+    // solo decide con qué materia se abre la pantalla.
+    const [subjectId, setSubjectId] = useState(activeCourse?.subject || '');
 
-    useEffect(() => {
-        loadPresentations();
-    }, [subjectId]);
-
-    const loadPresentations = () => {
+    const setAuthHeader = () => {
         if (account.token) {
             axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
         }
+    };
+
+    useEffect(() => {
+        setAuthHeader();
+        axios.get(`${config.API_SERVER}subjects/`)
+            .then(res => setSubjects(Array.isArray(res.data) ? res.data : (res.data.results ?? [])))
+            .catch(console.error);
+    }, []);
+
+    const loadPresentations = useCallback(() => {
+        setAuthHeader();
         setLoading(true);
         const params = subjectId ? `?subject=${subjectId}` : '';
         axios.get(`${config.API_SERVER}presentations/${params}`)
             .then(res => setPresentations(Array.isArray(res.data) ? res.data : (res.data.results ?? [])))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subjectId]);
+
+    useEffect(() => {
+        loadPresentations();
+    }, [loadPresentations]);
 
     const handleDelete = () => {
         if (!deleteTarget) return;
@@ -63,22 +81,6 @@ const Presentations = () => {
             .catch(() => setSnackbar({ open: true, message: 'Error al eliminar.', severity: 'error' }));
     };
 
-    const slideCount = (content) => {
-        if (!content) return 1;
-        return (content.split('---').length) + 1; // +1 for cover
-    };
-
-    const THEME_COLORS = {
-        default:   { bg: [28, 28, 28],    fg: [255, 255, 255] },
-        ocean:     { bg: [26, 111, 160],   fg: [255, 255, 255] },
-        forest:    { bg: [61, 107, 63],    fg: [255, 255, 255] },
-        sunset:    { bg: [139, 58, 58],    fg: [232, 213, 183] },
-        corporate: { bg: [255, 255, 255],  fg: [34, 34, 34] },
-        neon:      { bg: [13, 13, 13],     fg: [168, 85, 247] },
-    };
-
-    const LIGHT_THEMES = ['corporate'];
-
     const loadImageAsDataUrl = (url) =>
         new Promise((resolve) => {
             const img = new Image();
@@ -90,7 +92,7 @@ const Presentations = () => {
                     canvas.height = img.naturalHeight;
                     canvas.getContext('2d').drawImage(img, 0, 0);
                     resolve(canvas.toDataURL('image/png'));
-                } catch (_) { resolve(null); }
+                } catch { resolve(null); }
             };
             img.onerror = () => resolve(null);
             img.src = url;
@@ -99,7 +101,7 @@ const Presentations = () => {
     const exportToPdf = async (p) => {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const W = 297, H = 210;
-        const colors = THEME_COLORS[p.theme] || THEME_COLORS.default;
+        const colors = pdfColors(p);
         const [bgR, bgG, bgB] = colors.bg;
         const [fgR, fgG, fgB] = colors.fg;
 
@@ -107,12 +109,13 @@ const Presentations = () => {
         doc.setFillColor(bgR, bgG, bgB);
         doc.rect(0, 0, W, H, 'F');
 
-        const coverLogo = LIGHT_THEMES.includes(p.theme)
-            ? (p.logo_oscuro || p.logo_url)
-            : (p.logo_url || p.logo_oscuro);
+        // Misma portada que el deck: logo arriba y el texto arrancando a media
+        // página, todo centrado horizontalmente.
+        const coverLogo = pickLogo(p, p.palette);
 
-        let logoY = 20;
+        const logoY = 20;
         const logoH = 28;
+        let cursorY = H / 2;
         if (coverLogo) {
             const dataUrl = await loadImageAsDataUrl(coverLogo);
             if (dataUrl) {
@@ -121,23 +124,28 @@ const Presentations = () => {
                 const ratio = tmpImg.naturalWidth / tmpImg.naturalHeight;
                 const logoW = Math.min(logoH * ratio, 80);
                 doc.addImage(dataUrl, 'PNG', (W - logoW) / 2, logoY, logoW, logoH);
+                // Un logo desmedido nunca debe quedar debajo del título.
+                cursorY = Math.max(cursorY, logoY + logoH + 6);
             }
         }
 
-        // Title centered vertically
         doc.setTextColor(fgR, fgG, fgB);
         doc.setFontSize(28);
         doc.setFont('helvetica', 'bold');
         const titleLines = doc.splitTextToSize(p.title, W - 40);
-        const titleY = H / 2 - (titleLines.length * 10) / 2;
-        doc.text(titleLines, W / 2, titleY, { align: 'center' });
+        // La `y` de jsPDF es la línea base; se baja para que el texto *empiece*
+        // a media página, como en el deck.
+        cursorY += 8;
+        doc.text(titleLines, W / 2, cursorY, { align: 'center' });
+        cursorY += (titleLines.length - 1) * 10;
 
         if (p.subtitle) {
             doc.setFontSize(16);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(fgR, fgG, fgB);
             doc.setGState(doc.GState({ opacity: 0.75 }));
-            doc.text(p.subtitle, W / 2, titleY + titleLines.length * 10 + 8, { align: 'center' });
+            cursorY += 10;
+            doc.text(p.subtitle, W / 2, cursorY, { align: 'center' });
             doc.setGState(doc.GState({ opacity: 1 }));
         }
 
@@ -146,12 +154,13 @@ const Presentations = () => {
             doc.setFont('helvetica', 'italic');
             doc.setTextColor(fgR, fgG, fgB);
             doc.setGState(doc.GState({ opacity: 0.75 }));
-            doc.text(p.autor, W / 2, H - 18, { align: 'center' });
+            cursorY += 12;
+            doc.text(p.autor, W / 2, cursorY, { align: 'center' });
             doc.setGState(doc.GState({ opacity: 1 }));
         }
 
         // --- Content slides ---
-        const slides = (p.content || '').split(/\n---\n|^---\n/m).map(s => s.trim()).filter(Boolean);
+        const slides = splitSlides(p.content).map(s => s.markdown);
         slides.forEach((slideContent, idx) => {
             doc.addPage();
             doc.setFillColor(bgR, bgG, bgB);
@@ -220,27 +229,34 @@ const Presentations = () => {
         doc.save(`${p.title.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'presentacion'}.pdf`);
     };
 
-    const subjectName = activeCourse
-        ? (activeCourse.subject_details?.name || activeCourse.subject?.name || '')
-        : '';
+    const orphanCount = presentations.filter(p => !p.subject).length;
 
     return (
         <Grid container spacing={3}>
             <Grid size={12}>
                 <Card>
                     <CardContent>
-                        <Grid container alignItems="center" justifyContent="space-between">
+                        <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
                             <Grid>
-                                <Typography variant="h3">
-                                    Presentaciones{subjectName ? `: ${subjectName}` : ''}
+                                <Typography variant="h3">Presentaciones</Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                    El material pertenece a la materia y se reutiliza en todos sus cursos.
                                 </Typography>
-                                {!activeCourse && (
-                                    <Typography variant="caption" color="textSecondary">
-                                        Seleccione un curso para filtrar por materia
-                                    </Typography>
-                                )}
                             </Grid>
-                            <Grid>
+                            <Grid sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <FormControl size="small" sx={{ minWidth: 240 }}>
+                                    <InputLabel>Materia</InputLabel>
+                                    <Select
+                                        value={subjectId}
+                                        onChange={(e) => setSubjectId(e.target.value)}
+                                        label="Materia"
+                                    >
+                                        <MenuItem value=""><em>Todas las materias</em></MenuItem>
+                                        {subjects.map(s => (
+                                            <MenuItem key={s.id} value={s.id}>{s.name} ({s.code})</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
                                 <Button
                                     variant="contained"
                                     color="secondary"
@@ -251,6 +267,13 @@ const Presentations = () => {
                                 </Button>
                             </Grid>
                         </Grid>
+                        {!subjectId && orphanCount > 0 && (
+                            <Alert severity="info" sx={{ mt: 2 }}>
+                                {orphanCount === 1
+                                    ? 'Hay 1 presentación sin materia asignada. Edítala para asignarle una.'
+                                    : `Hay ${orphanCount} presentaciones sin materia asignada. Edítalas para asignarles una.`}
+                            </Alert>
+                        )}
                     </CardContent>
                 </Card>
             </Grid>
@@ -262,7 +285,7 @@ const Presentations = () => {
                             <TableRow>
                                 <TableCell>ID</TableCell>
                                 <TableCell>Título</TableCell>
-                                <TableCell>Subtítulo</TableCell>
+                                <TableCell>Materia</TableCell>
                                 <TableCell>Tema</TableCell>
                                 <TableCell>Slides</TableCell>
                                 <TableCell>Última Modificación</TableCell>
@@ -271,7 +294,8 @@ const Presentations = () => {
                         </TableHead>
                         <TableBody>
                             {presentations.map(p => {
-                                const theme = THEME_LABELS[p.theme] || THEME_LABELS.default;
+                                const colors = getThemeColors(p.theme, p.palette);
+                                const themeLabel = (THEMES[p.theme] || THEMES.quarto).label;
                                 return (
                                     <TableRow key={p.id} hover>
                                         <TableCell>
@@ -279,19 +303,30 @@ const Presentations = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="subtitle2" fontWeight={600}>{p.title}</Typography>
+                                            {p.subtitle && (
+                                                <Typography variant="caption" color="textSecondary">{p.subtitle}</Typography>
+                                            )}
                                         </TableCell>
                                         <TableCell>
-                                            <Typography variant="body2" color="textSecondary">{p.subtitle || '—'}</Typography>
+                                            {p.subject_name
+                                                ? <Typography variant="body2">{p.subject_name}</Typography>
+                                                : <Chip size="small" color="warning" variant="outlined" label="Sin materia" />}
                                         </TableCell>
                                         <TableCell>
                                             <Chip
                                                 size="small"
-                                                label={theme.label}
-                                                sx={{ bgcolor: theme.color + '22', color: theme.color, fontWeight: 600, borderColor: theme.color, border: '1px solid' }}
+                                                label={`${themeLabel} · ${PALETTE_LABELS[p.palette] || PALETTE_LABELS.dark}`}
+                                                sx={{
+                                                    bgcolor: colors.bg,
+                                                    color: colors.heading,
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    fontWeight: 600,
+                                                }}
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <Chip size="small" label={`${slideCount(p.content)} slides`} />
+                                            <Chip size="small" label={`${1 + countSlides(p.content)} slides`} />
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="caption">

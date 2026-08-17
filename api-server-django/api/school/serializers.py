@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from . import models
+from .qmd import count_qmd_slides
 from api.user.serializers import UserSerializer
 from django.contrib.auth import get_user_model
 
@@ -187,9 +188,22 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class PresentationSerializer(serializers.ModelSerializer):
+    subject_name: serializers.CharField = serializers.CharField(source='subject.name', read_only=True)
+    subject_code: serializers.CharField = serializers.CharField(source='subject.code', read_only=True)
+    slide_count: serializers.SerializerMethodField = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Presentation
         fields = '__all__'
+        extra_kwargs = {
+            # Obligatoria en la API aunque la columna admita NULL: las
+            # presentaciones heredadas sin materia siguen siendo legibles.
+            'subject': {'required': True, 'allow_null': False},
+        }
+
+    def get_slide_count(self, obj: models.Presentation) -> int:
+        """Portada + una diapositiva por cada encabezado `##` de nivel 2."""
+        return 1 + count_qmd_slides(obj.content)
 
 class RegistrationRequestSerializer(serializers.ModelSerializer):
     class Meta:

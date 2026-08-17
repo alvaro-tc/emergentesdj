@@ -272,13 +272,26 @@ class Project(models.Model):
         return self.name
 
 class Presentation(models.Model):
+    """
+    Diapositivas en formato Quarto (`.qmd`), colgadas de una `Subject`.
+
+    No dependen del `Course` ni del periodo: el material de una materia se
+    reutiliza semestre a semestre. `subject` es obligatorio vía serializer y no
+    a nivel de columna, para no perder las presentaciones heredadas que aún no
+    tienen materia asignada.
+    """
+    # Temas predefinidos. Cada uno trae sus dos paletas en
+    # `presentation/quartoTheme.scss`: añadir uno aquí obliga a definirlo allí
+    # y en `presentation/themes.js`.
     THEME_CHOICES = [
-        ('default',   'Default'),
-        ('ocean',     'Ocean'),
-        ('forest',    'Forest'),
-        ('sunset',    'Sunset'),
-        ('corporate', 'Corporate'),
-        ('neon',      'Neon'),
+        ('quarto', 'Quarto'),
+        ('serif', 'Serif'),
+        ('ocean', 'Océano'),
+        ('contrast', 'Alto contraste'),
+    ]
+    PALETTE_CHOICES = [
+        ('dark',  'Oscuro'),
+        ('light', 'Claro'),
     ]
     subject      = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True, related_name='presentations')
     title        = models.CharField(max_length=255)
@@ -286,7 +299,15 @@ class Presentation(models.Model):
     autor        = models.CharField(max_length=255, blank=True, null=True)
     logo_url     = models.URLField(blank=True, null=True)
     logo_oscuro  = models.URLField(blank=True, null=True)
-    theme        = models.CharField(max_length=50, choices=THEME_CHOICES, default='default')
+    theme        = models.CharField(max_length=50, choices=THEME_CHOICES, default='quarto')
+    # Paleta con la que se abre la presentación; el expositor puede alternarla con `T`.
+    palette      = models.CharField(max_length=10, choices=PALETTE_CHOICES, default='dark')
+    # Overrides de color. Vacío = usa el valor del tema. Uno por paleta, porque un
+    # mismo tono no funciona sobre fondo claro y oscuro a la vez.
+    heading_color_light    = models.CharField(max_length=9, blank=True, null=True)
+    heading_color_dark     = models.CharField(max_length=9, blank=True, null=True)
+    subheading_color_light = models.CharField(max_length=9, blank=True, null=True)
+    subheading_color_dark  = models.CharField(max_length=9, blank=True, null=True)
     content      = models.TextField(blank=True, null=True)
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
