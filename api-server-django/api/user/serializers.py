@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "date", "first_name", "paternal_surname", "maternal_surname", "ci_number", "phone", "role", "active_course"]
+        fields = ["id", "email", "date", "first_name", "paternal_surname", "maternal_surname", "ci_number", "ru", "observations", "phone", "role", "active_course"]
         read_only_field = ["id"]
 
 
@@ -17,7 +17,8 @@ class ManageUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'password', 'role', 'is_active', 'date',
-                  'first_name', 'paternal_surname', 'maternal_surname', 'ci_number', 'phone']
+                  'first_name', 'paternal_surname', 'maternal_surname', 'ci_number',
+                  'ru', 'observations', 'phone']
         read_only_fields = ['id', 'date']
 
     def validate_email(self, value):

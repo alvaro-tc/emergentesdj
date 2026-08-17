@@ -131,11 +131,22 @@ export const useTaskGrading = (activeCourse, account, location) => {
             .finally(() => setLoading(false));
     }, [changes, showSnack]);
 
+    /**
+     * Asigna la misma nota a todos los estudiantes de una tarea.
+     *
+     * Guarda en el acto, igual que una nota suelta: la pantalla no tiene botón
+     * de guardar, así que dejarlo solo en el estado local perdía el trabajo al
+     * recargar.
+     */
     const handleBulkGrade = useCallback((taskId, letter) => {
         const value = LETTER_SCORES[letter];
         setRows(prev => prev.map(row => ({ ...row, scores: { ...row.scores, [taskId]: value } })));
-        setChanges(prev => { const n = { ...prev }; rows.forEach(row => { n[`${row.enrollment_id}-${taskId}`] = value; }); return n; });
-    }, [rows]);
+        const updates = rows.map(row => ({ enrollment_id: row.enrollment_id, task_id: taskId, score: value }));
+        if (!updates.length) return;
+        axios.post(`${configData.API_SERVER}task-scores/bulk_save/`, { updates })
+            .then(() => showSnack(`${updates.length} notas asignadas`))
+            .catch(() => showSnack('Error guardando notas', 'error'));
+    }, [rows, showSnack]);
 
     const handleAddTask = useCallback((taskData) => {
         setLoading(true);

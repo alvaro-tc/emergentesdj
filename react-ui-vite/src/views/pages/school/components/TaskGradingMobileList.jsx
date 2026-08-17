@@ -11,6 +11,10 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
     const openModal = (row) => setModal({ open: true, row });
     const closeModal = () => setModal({ open: false, row: null });
 
+    /** Cuántas de las actividades visibles tienen nota. */
+    const countGraded = (row) =>
+        visibleTasks.filter(task => getLetterFromScore(row.scores[task.id])).length;
+
     const calcAverage = (row) => {
         let totalWeight = 0, weightedSum = 0;
         tasks.forEach(task => { const s = parseFloat(row.scores[task.id]) || 0; weightedSum += s * task.weight; totalWeight += task.weight; });
@@ -19,7 +23,9 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
 
     return (
         <>
-            <List style={{ marginTop: 10, padding: 0 }}>
+            {/* El padding inferior deja pasar el FAB de gestionar tareas, que
+                si no tapa al último estudiante de la lista. */}
+            <List style={{ marginTop: 10, padding: 0, paddingBottom: 88 }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: 20 }}><CircularProgress /></div>
                 ) : filteredRows.length === 0 ? (
@@ -36,10 +42,17 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                             <div>
                                 <Typography variant="body1" style={{ fontWeight: 600 }}>{row.paterno} {row.materno} {row.nombre}</Typography>
-                                {tasks.length > 0 && <Typography variant="caption" color="text.secondary">Promedio: {calcAverage(row)}</Typography>}
+                                {tasks.length > 0 && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Promedio: {calcAverage(row)} · {countGraded(row)}/{visibleTasks.length} calificadas
+                                    </Typography>
+                                )}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                {visibleTasks.slice(0, 3).map(task => {
+                                {/* Las tres últimas actividades, que son las que se
+                                    están calificando; las primeras del semestre ya
+                                    no dicen nada a estas alturas. */}
+                                {visibleTasks.slice(-3).map(task => {
                                     const letter = getLetterFromScore(row.scores[task.id]);
                                     return letter ? (
                                         <span key={task.id} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.palette.primary.main, color: '#fff', fontWeight: 'bold', fontSize: '0.8rem' }}>{letter}</span>
@@ -47,7 +60,6 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
                                         <span key={task.id} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', border: `2px dashed ${theme.palette.divider}`, color: theme.palette.text.disabled, fontSize: '0.7rem' }}>—</span>
                                     );
                                 })}
-                                {visibleTasks.length > 3 && <Typography variant="caption" color="text.secondary">+{visibleTasks.length - 3}</Typography>}
                                 <IconPencil size="1rem" color={theme.palette.text.secondary} />
                             </div>
                         </div>
@@ -60,7 +72,7 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
                 onClose={closeModal}
                 fullWidth maxWidth="xs"
                 sx={{ zIndex: 9999, '& .MuiDialog-container': { alignItems: { xs: 'flex-end', sm: 'center' } } }}
-                PaperProps={{ sx: { m: { xs: 0, sm: 2 }, width: '100%', borderRadius: { xs: '24px 24px 0 0', sm: '16px' }, pb: { xs: 2, sm: 0 }, maxHeight: '85vh' } }}
+                slotProps={{ paper: { sx: { m: { xs: 0, sm: 2 }, width: '100%', borderRadius: { xs: '24px 24px 0 0', sm: '16px' }, pb: { xs: 2, sm: 0 }, maxHeight: '85vh' } } }}
             >
                 {modal.row && (
                     <>
@@ -89,11 +101,16 @@ const TaskGradingMobileList = React.memo(({ filteredRows, visibleTasks, tasks, r
                                                     }}
                                                 >{l}</Button>
                                             ))}
+                                            {/* El `span` es obligatorio: MUI no puede
+                                                escuchar eventos sobre un botón
+                                                deshabilitado y avisa por consola. */}
                                             <Tooltip title="Borrar nota">
-                                                <IconButton disabled={task.is_locked || !letter}
-                                                    onClick={() => { if (!letter) return; onClearScore(liveRow.enrollment_id, task.id); setModal(prev => ({ ...prev, row: { ...prev.row, scores: { ...prev.row.scores, [task.id]: null } } })); }}
-                                                    sx={{ color: letter ? 'error.main' : 'text.disabled', border: '1px solid', borderColor: letter ? 'error.main' : 'divider', borderRadius: '10px', flex: 1, minWidth: 0, height: { xs: '44px', sm: '48px' } }}
-                                                ><IconX size="1.2rem" /></IconButton>
+                                                <span style={{ flex: 1, display: 'flex' }}>
+                                                    <IconButton disabled={task.is_locked || !letter}
+                                                        onClick={() => { if (!letter) return; onClearScore(liveRow.enrollment_id, task.id); setModal(prev => ({ ...prev, row: { ...prev.row, scores: { ...prev.row.scores, [task.id]: null } } })); }}
+                                                        sx={{ color: letter ? 'error.main' : 'text.disabled', border: '1px solid', borderColor: letter ? 'error.main' : 'divider', borderRadius: '10px', flex: 1, minWidth: 0, height: { xs: '44px', sm: '48px' } }}
+                                                    ><IconX size="1.2rem" /></IconButton>
+                                                </span>
                                             </Tooltip>
                                         </div>
                                     </div>

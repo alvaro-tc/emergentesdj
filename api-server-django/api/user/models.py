@@ -54,6 +54,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     paternal_surname = models.CharField(max_length=255, blank=True, null=True)
     maternal_surname = models.CharField(max_length=255, blank=True, null=True)
     ci_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    # Registro universitario. No es único a nivel de columna: llega de planillas
+    # externas y un dato repetido no debe tumbar una importación entera.
+    ru = models.CharField(max_length=50, blank=True, null=True)
+    observations = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ADMIN)
     active_course = models.ForeignKey('school.Course', on_delete=models.SET_NULL, null=True, blank=True, related_name='active_users')

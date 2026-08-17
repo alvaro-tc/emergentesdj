@@ -15,6 +15,24 @@ import axios from 'axios';
 import configData from '../../../config';
 import CourseRequestsDialog from './CourseRequestsDialog';
 
+/**
+ * Celda de RU / observaciones en la vista previa.
+ *
+ * De un estudiante que ya existe manda su dato guardado; el del archivo solo se
+ * anuncia cuando viene a rellenar un hueco, para que se vea qué va a cambiar.
+ */
+const fillPreview = (stored, incoming) => {
+    if (stored) return stored;
+    if (incoming) {
+        return (
+            <Typography variant="caption" color="primary" style={{ fontWeight: 'bold' }}>
+                + {incoming}
+            </Typography>
+        );
+    }
+    return '';
+};
+
 const Enrollments = () => {
     // const theme = useTheme(); // Unused
     const account = useSelector((state) => state.account);
@@ -62,12 +80,13 @@ const Enrollments = () => {
 
     // Export
     const [exportLoading, setExportLoading] = useState(false);
+    const [moodleLoading, setMoodleLoading] = useState(false);
 
     // Edit student dialog
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editStudent, setEditStudent] = useState(null);
     const [editLoading, setEditLoading] = useState(false);
-    const [editForm, setEditForm] = useState({ ci_number: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '' });
+    const [editForm, setEditForm] = useState({ ci_number: '', ru: '', first_name: '', paternal_surname: '', maternal_surname: '', email: '', phone: '', observations: '' });
 
     // WhatsApp dialog
     const [waDialogOpen, setWaDialogOpen] = useState(false);
@@ -199,11 +218,13 @@ const Enrollments = () => {
         setEditStudent(enrollment);
         setEditForm({
             ci_number: s.ci_number || '',
+            ru: s.ru || '',
             first_name: s.first_name || '',
             paternal_surname: s.paternal_surname || '',
             maternal_surname: s.maternal_surname || '',
             email: s.email || '',
-            phone: s.phone || ''
+            phone: s.phone || '',
+            observations: s.observations || ''
         });
         setEditDialogOpen(true);
     };
@@ -274,7 +295,13 @@ const Enrollments = () => {
         const existingStudentIds = previewData.found.filter(s => !s.is_enrolled).map(s => s.id);
         const studentsToCreate = previewData.to_create || [];
 
-        if (existingStudentIds.length === 0 && studentsToCreate.length === 0) {
+        // RU y observaciones de los que ya existen: el backend solo rellena
+        // huecos, así que se mandan todos, estén ya inscritos o no.
+        const studentsToUpdate = (previewData.found || [])
+            .filter(s => (s.file_ru && !s.ru) || (s.file_observations && !s.observations))
+            .map(s => ({ id: s.id, ru: s.file_ru, observations: s.file_observations }));
+
+        if (existingStudentIds.length === 0 && studentsToCreate.length === 0 && studentsToUpdate.length === 0) {
             setSnackbar({ open: true, message: 'No hay estudiantes nuevos para inscribir', severity: 'info' });
             setPreviewOpen(false);
             return;
@@ -287,15 +314,19 @@ const Enrollments = () => {
         axios.post(`${configData.API_SERVER}enrollments/confirm_bulk_enrollment/`, {
             course_id: activeCourse.id,
             student_ids: existingStudentIds,
-            students_to_create: studentsToCreate
+            students_to_create: studentsToCreate,
+            students_to_update: studentsToUpdate
         })
             .then(response => {
-                const { enrolled_count, created_users_count, reused_users_count, skipped } = response.data;
+                const { enrolled_count, created_users_count, reused_users_count, updated_users_count, skipped } = response.data;
                 const parts = [
                     `Inscritos: ${enrolled_count}`,
                     `Nuevos usuarios: ${created_users_count || 0}`,
                     `Reutilizados: ${reused_users_count || 0}`,
                 ];
+                if (updated_users_count) {
+                    parts.push(`RU/observaciones completados: ${updated_users_count}`);
+                }
                 if (skipped && skipped.length > 0) {
                     parts.push(`Omitidos (ya inscritos): ${skipped.length}`);
                 }
@@ -420,7 +451,9 @@ const Enrollments = () => {
                     Materno: en.student_details?.maternal_surname || '',
                     Nombres: en.student_details?.first_name || '',
                     Correo: en.student_details?.email || '',
-                    Celular: en.student_details?.phone || ''
+                    Celular: en.student_details?.phone || '',
+                    RU: en.student_details?.ru || '',
+                    Observaciones: en.student_details?.observations || ''
                 }));
                 const ws = XLSX.utils.json_to_sheet(rows);
                 const wb = XLSX.utils.book_new();
@@ -433,10 +466,93 @@ const Enrollments = () => {
             .finally(() => setExportLoading(false));
     };
 
+    /**
+     * CSV de matriculación masiva para Moodle (Administración → Subir usuarios).
+     *
+     * Moodle exige cabeceras exactas y una fila por usuario; `course1` es el
+     * nombre corto del curso, que aquí es el identificador del curso. La
+     * contraseña se deriva del carnet, así que el estudiante entra con un dato
+     * que ya conoce y Moodle le pedirá cambiarla.
+     */
+    const handleExportMoodle = () => {
+        if (!activeCourse) return;
+        const courseIdentifier = activeCourse.course_identifier || '';
+        if (!courseIdentifier) {
+            setSnackbar({
+                open: true,
+                severity: 'error',
+                message: 'El curso no tiene identificador. Edítalo y asígnale uno: es el nombre corto del curso en Moodle.'
+            });
+            return;
+        }
+
+        setMoodleLoading(true);
+        axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
+        axios.get(`${configData.API_SERVER}enrollments/`, {
+            params: { course: activeCourse.id, page_size: 10000 }
+        })
+            .then(response => {
+                const list = response.data.results || response.data;
+                const header = ['username', 'firstname', 'lastname', 'email', 'password', 'course1', 'role1'];
+
+                // Un ';' o un salto de línea dentro de un campo rompería la fila.
+                const escape = (value) => {
+                    const text = String(value ?? '').trim();
+                    return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+                };
+
+                let withoutEmail = 0;
+                const lines = list.map(en => {
+                    const s = en.student_details || {};
+                    const ci = (s.ci_number || '').trim();
+                    const lastname = [s.paternal_surname, s.maternal_surname]
+                        .filter(Boolean).join(' ').trim();
+                    // Moodle rechaza la fila entera sin un correo con forma de
+                    // correo, y el sistema guarda el CI ahí cuando no hay uno
+                    // real. Se sustituye por uno derivado del carnet: es único
+                    // por estudiante, que es lo que Moodle exige.
+                    const stored = (s.email || '').trim();
+                    const hasEmail = stored.includes('@');
+                    if (!hasEmail) withoutEmail += 1;
+                    const email = hasEmail ? stored : `${ci}@mail.com`;
+                    return [
+                        ci,
+                        s.first_name || '',
+                        lastname,
+                        email,
+                        `${ci}*Bo`,
+                        courseIdentifier,
+                        'Student'
+                    ].map(escape).join(';');
+                });
+
+                // BOM para que Excel abra el archivo con los acentos correctos.
+                const csv = `\uFEFF${[header.join(';'), ...lines].join('\r\n')}\r\n`;
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `moodle_${courseIdentifier.replace(/\s+/g, '_')}.csv`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                setSnackbar({
+                    open: true,
+                    severity: withoutEmail > 0 ? 'warning' : 'success',
+                    message: withoutEmail > 0
+                        ? `${lines.length} estudiantes exportados. ${withoutEmail} sin correo: se usó carnet@mail.com, que no recibe mensajes.`
+                        : `${lines.length} estudiantes exportados para Moodle.`
+                });
+            })
+            .catch(() => setSnackbar({ open: true, message: 'Error al generar el CSV de Moodle', severity: 'error' }))
+            .finally(() => setMoodleLoading(false));
+    };
+
     const handleDownloadTemplate = () => {
+        // RU y Observaciones son opcionales: se pueden borrar del archivo.
         const data = [
-            { CI: '12345678', Paterno: 'Gomez', Materno: 'Lopez', Nombre: 'Juan', Email: 'juan@example.com', Celular: '70000001' },
-            { CI: '87654321', Paterno: 'Quispe', Materno: 'Mamani', Nombre: 'Maria', Email: 'maria@example.com', Celular: '70000002' },
+            { CI: '12345678', Paterno: 'Gomez', Materno: 'Lopez', Nombre: 'Juan', Email: 'juan@example.com', Celular: '70000001', RU: '1234567', Observaciones: '' },
+            { CI: '87654321', Paterno: 'Quispe', Materno: 'Mamani', Nombre: 'Maria', Email: 'maria@example.com', Celular: '70000002', RU: '7654321', Observaciones: 'Arrastre' },
         ];
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
@@ -512,6 +628,21 @@ const Enrollments = () => {
                         </Button>
                     </Tooltip>
                 </Grid>
+                <Grid>
+                    <Tooltip title="CSV para matricular a estos estudiantes en Moodle (Subir usuarios)">
+                        <span>
+                            <Button
+                                variant="outlined"
+                                color="warning"
+                                startIcon={moodleLoading ? <MuiCircularProgress size={16} /> : <IconDownload />}
+                                onClick={handleExportMoodle}
+                                disabled={moodleLoading || totalCount === 0}
+                            >
+                                {moodleLoading ? 'Generando...' : 'CSV Moodle'}
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </Grid>
                 {selectedIds.size > 0 && (
                     <Grid>
                         <Button
@@ -567,11 +698,13 @@ const Enrollments = () => {
                             </TableCell>
                             <TableCell width={40}>#</TableCell>
                             <TableCell>CI</TableCell>
+                            <TableCell>RU</TableCell>
                             <TableCell>Paterno</TableCell>
                             <TableCell>Materno</TableCell>
                             <TableCell>Nombre</TableCell>
                             <TableCell>Email</TableCell>
                             <TableCell>Celular</TableCell>
+                            <TableCell>Observaciones</TableCell>
                             <TableCell align="right">Fecha Inscripción</TableCell>
                             <TableCell align="center">Acciones</TableCell>
                         </TableRow>
@@ -579,7 +712,7 @@ const Enrollments = () => {
                     <TableBody>
                         {enrollments.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={10} align="center">
+                                <TableCell colSpan={12} align="center">
                                     No se encontraron estudiantes{searchDebounced ? ` para "${searchDebounced}"` : ''}.
                                 </TableCell>
                             </TableRow>
@@ -603,6 +736,7 @@ const Enrollments = () => {
                                     </TableCell>
                                     <TableCell>{page * rowsPerPage + index + 1}</TableCell>
                                     <TableCell>{enrollment.student_details?.ci_number || 'N/A'}</TableCell>
+                                    <TableCell>{enrollment.student_details?.ru || '—'}</TableCell>
                                     <TableCell>{enrollment.student_details?.paternal_surname}</TableCell>
                                     <TableCell>{enrollment.student_details?.maternal_surname}</TableCell>
                                     <TableCell>{enrollment.student_details?.first_name}</TableCell>
@@ -624,6 +758,19 @@ const Enrollments = () => {
                                                 </Tooltip>
                                             )}
                                         </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Tooltip title={enrollment.student_details?.observations || ''}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontSize: '0.8rem', maxWidth: 160,
+                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                {enrollment.student_details?.observations || '—'}
+                                            </Typography>
+                                        </Tooltip>
                                     </TableCell>
                                     <TableCell align="right">{enrollment.date_enrolled}</TableCell>
                                     <TableCell align="center">
@@ -882,6 +1029,8 @@ const Enrollments = () => {
                                             <TableCell>Paterno</TableCell>
                                             <TableCell>Materno</TableCell>
                                             <TableCell>Nombre</TableCell>
+                                            <TableCell>RU</TableCell>
+                                            <TableCell>Observaciones</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -898,6 +1047,8 @@ const Enrollments = () => {
                                                 <TableCell>{s.paternal_surname}</TableCell>
                                                 <TableCell>{s.maternal_surname}</TableCell>
                                                 <TableCell>{s.first_name}</TableCell>
+                                                <TableCell>{fillPreview(s.ru, s.file_ru)}</TableCell>
+                                                <TableCell>{fillPreview(s.observations, s.file_observations)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -928,6 +1079,8 @@ const Enrollments = () => {
                                             <TableCell>Nombre</TableCell>
                                             <TableCell>Email</TableCell>
                                             <TableCell>Celular</TableCell>
+                                            <TableCell>RU</TableCell>
+                                            <TableCell>Observaciones</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -939,6 +1092,8 @@ const Enrollments = () => {
                                                 <TableCell>{s.first_name}</TableCell>
                                                 <TableCell>{s.email}</TableCell>
                                                 <TableCell>{s.phone}</TableCell>
+                                                <TableCell>{s.ru}</TableCell>
+                                                <TableCell>{s.observations}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -1061,6 +1216,31 @@ const Enrollments = () => {
                                 variant="outlined"
                                 fullWidth
                                 placeholder="Ej: 70000000"
+                            />
+                        </Grid>
+                        <Grid
+                            size={{
+                                xs: 12,
+                                sm: 6
+                            }}>
+                            <TextField
+                                label="RU"
+                                value={editForm.ru}
+                                onChange={(e) => setEditForm({ ...editForm, ru: e.target.value })}
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Registro universitario"
+                            />
+                        </Grid>
+                        <Grid size={12}>
+                            <TextField
+                                label="Observaciones"
+                                value={editForm.observations}
+                                onChange={(e) => setEditForm({ ...editForm, observations: e.target.value })}
+                                variant="outlined"
+                                fullWidth
+                                multiline
+                                minRows={2}
                             />
                         </Grid>
                     </Grid>

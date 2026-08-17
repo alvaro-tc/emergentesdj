@@ -398,6 +398,11 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                     col_map['email'] = idx
                 elif h in ['celular', 'telefono', 'phone', 'cel']:
                     col_map['phone'] = idx
+                elif h in ['ru', 'r.u.', 'r.u', 'registro universitario',
+                           'registro', 'reg. universitario', 'reg universitario']:
+                    col_map['ru'] = idx
+                elif h in ['observaciones', 'observacion', 'obs', 'comentario', 'comentarios']:
+                    col_map['observations'] = idx
 
             if 'ci' not in col_map:
                 return Response({"error": f"Missing CI column. Found: {headers}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -420,7 +425,12 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                     else:
                         row_vals.append(str(c).strip())
 
-                if len(row_vals) <= max(col_map.values()): continue
+                # Se rellena en vez de descartar la fila: una columna opcional
+                # vacía al final (observaciones, RU) llega recortada en CSV, y
+                # eso no es motivo para perder al estudiante.
+                width = max(col_map.values()) + 1
+                if len(row_vals) < width:
+                    row_vals.extend([''] * (width - len(row_vals)))
 
                 raw_ci = row_vals[col_map['ci']]
                 # Also handle the case where the raw CI arrives as a float string like "12345678.0"
@@ -435,6 +445,9 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
 
                 email = row_vals[col_map['email']].strip() if 'email' in col_map else ''
                 phone = row_vals[col_map['phone']].strip() if 'phone' in col_map else ''
+                # Ambas columnas son opcionales: el archivo puede no traerlas.
+                ru = row_vals[col_map['ru']].strip() if 'ru' in col_map else ''
+                observations = row_vals[col_map['observations']].strip() if 'observations' in col_map else ''
 
                 if has_separate_names:
                     # Columnas separadas: Paterno | Materno | Nombre
@@ -475,6 +488,8 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                     'first_name': first_name,
                     'email': email,
                     'phone': phone,
+                    'ru': ru,
+                    'observations': observations,
                 })
 
         except Exception as e:
@@ -508,6 +523,12 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                     'paternal_surname': user.paternal_surname,
                     'maternal_surname': user.maternal_surname,
                     'email': user.email,
+                    'ru': user.ru,
+                    'observations': user.observations,
+                    # Lo que trae el archivo: de un estudiante ya existente no se
+                    # pisa nada, pero sí se pueden rellenar sus huecos.
+                    'file_ru': s['ru'],
+                    'file_observations': s['observations'],
                     'is_enrolled': user.id in enrolled_student_ids
                 })
             else:
@@ -530,6 +551,7 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
         - enrolled_count: new enrollments created
         - created_users_count: brand-new User records created
         - reused_users_count: existing users located by CI and enrolled
+        - updated_users_count: existing users whose blank RU/observations were filled
         - skipped: list of {ci, reason} for rows that were not enrolled
         """
         from django.db import transaction
@@ -602,13 +624,38 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
                             first_name=s_data.get('first_name', ''),
                             paternal_surname=s_data.get('paternal_surname', ''),
                             maternal_surname=s_data.get('maternal_surname', ''),
-                            phone=s_data.get('phone', '')
+                            phone=s_data.get('phone', ''),
+                            ru=(s_data.get('ru') or '').strip() or None,
+                            observations=(s_data.get('observations') or '').strip() or None,
                         )
                         student_ids.append(new_user.id)
                         created_users_count += 1
                         existing_emails.add(email)
                     except Exception as e:
                         print(f"Error creating user {ci}: {e}")
+
+        # 1b. RU y observaciones de estudiantes que ya existían.
+        # Solo se rellenan huecos: el dato que ya tiene el sistema manda sobre el
+        # de la planilla, igual que con el nombre o el correo.
+        students_to_update = request.data.get('students_to_update', [])
+        filled_fields_count = 0
+        if students_to_update:
+            by_id = {int(u['id']): u for u in students_to_update if u.get('id') is not None}
+            if by_id:
+                to_save = []
+                for user in User.objects.filter(id__in=by_id.keys()):
+                    incoming = by_id[user.id]
+                    changed = False
+                    for field in ('ru', 'observations'):
+                        value = (incoming.get(field) or '').strip()
+                        if value and not (getattr(user, field) or '').strip():
+                            setattr(user, field, value)
+                            changed = True
+                    if changed:
+                        to_save.append(user)
+                if to_save:
+                    User.objects.bulk_update(to_save, ['ru', 'observations'])
+                    filled_fields_count = len(to_save)
 
         # 2. Bulk enroll — single INSERT with ignore_conflicts instead of N get_or_create calls
         student_ids = list(set(student_ids))
@@ -653,6 +700,7 @@ class EnrollmentViewSet(AuditMixin, viewsets.ModelViewSet):
             "enrolled_count": enrolled_count,
             "created_users_count": created_users_count,
             "reused_users_count": reused_users_count,
+            "updated_users_count": filled_fields_count,
             "skipped": skipped,
         }, status=status.HTTP_200_OK)
 
