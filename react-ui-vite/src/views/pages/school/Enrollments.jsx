@@ -4,7 +4,7 @@ import {
     Grid, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     IconButton, TextField, Alert, Snackbar, Divider, InputAdornment, TablePagination,
     Dialog, DialogTitle, DialogContent, DialogActions, Box, List, ListItem, ListItemText, ListItemSecondaryAction,
-    Checkbox, Tooltip
+    Checkbox, Tooltip, LinearProgress
 } from '@mui/material';
 import { Autocomplete } from '@mui/material'; // Standard Material UI Autocomplete
 import MainCard from '../../../ui-component/cards/MainCard';
@@ -33,6 +33,27 @@ const fillPreview = (stored, incoming) => {
     return '';
 };
 
+/**
+ * Motivo legible de un fallo de axios.
+ *
+ * El mensaje genérico escondía la causa real (un 504 del proxy se veía igual
+ * que un CI inválido), y con cargas de 100+ estudiantes eso dejaba a ciegas.
+ */
+const describeError = (err) => {
+    if (err.response) {
+        return err.response.data?.error || `El servidor respondió ${err.response.status}`;
+    }
+    if (err.code === 'ECONNABORTED') return 'La petición superó el tiempo de espera';
+    return err.message || 'Error de red';
+};
+
+// Crear un usuario implica hashear su contraseña (~0,2 s cada uno), así que una
+// confirmación de 120 estudiantes de un tirón supera el tiempo de espera del
+// proxy en producción. Se envía por lotes: cada petición es corta, el progreso
+// queda a la vista y el endpoint es idempotente, así que reintentar no duplica.
+const CREATE_CHUNK = 20;   // crear usuarios: lo caro
+const ENROLL_CHUNK = 100;  // inscribir o rellenar RU/observaciones: barato
+
 const Enrollments = () => {
     // const theme = useTheme(); // Unused
     const account = useSelector((state) => state.account);
@@ -57,6 +78,7 @@ const Enrollments = () => {
     const [pendingCount, setPendingCount] = useState(0);
     const [uploadLoading, setUploadLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+    const [confirmProgress, setConfirmProgress] = useState({ done: 0, total: 0 });
 
     // Enrollment modal
     const [enrollModalOpen, setEnrollModalOpen] = useState(false);
@@ -282,7 +304,7 @@ const Enrollments = () => {
                 event.target.value = null; // Reset input
             })
             .catch(err => {
-                setSnackbar({ open: true, message: 'Error al analizar archivo', severity: 'error' });
+                setSnackbar({ open: true, message: `Error al analizar archivo: ${describeError(err)}`, severity: 'error' });
                 event.target.value = null;
             })
             .finally(() => {
@@ -290,7 +312,7 @@ const Enrollments = () => {
             });
     };
 
-    const handleConfirmEnrollment = () => {
+    const handleConfirmEnrollment = async () => {
         // IDs of existing students found
         const existingStudentIds = previewData.found.filter(s => !s.is_enrolled).map(s => s.id);
         const studentsToCreate = previewData.to_create || [];
@@ -307,39 +329,85 @@ const Enrollments = () => {
             return;
         }
 
+        // Un lote por bloque de trabajo. Los usuarios nuevos van primero: es lo
+        // lento y lo que más interesa ver avanzar.
+        const chunks = [];
+        for (let i = 0; i < studentsToCreate.length; i += CREATE_CHUNK) {
+            chunks.push({ students_to_create: studentsToCreate.slice(i, i + CREATE_CHUNK) });
+        }
+        for (let i = 0; i < existingStudentIds.length; i += ENROLL_CHUNK) {
+            chunks.push({ student_ids: existingStudentIds.slice(i, i + ENROLL_CHUNK) });
+        }
+        for (let i = 0; i < studentsToUpdate.length; i += ENROLL_CHUNK) {
+            chunks.push({ students_to_update: studentsToUpdate.slice(i, i + ENROLL_CHUNK) });
+        }
+
+        const total = existingStudentIds.length + studentsToCreate.length + studentsToUpdate.length;
+
         setConfirmLoading(true);
-        setSnackbar({ open: true, message: 'Procesando inscripciones, esto puede demorar varios minutos. Por favor espere...', severity: 'info' });
+        setConfirmProgress({ done: 0, total });
+        setSnackbar({ open: true, message: `Procesando ${total} estudiantes por lotes. Por favor espere...`, severity: 'info' });
 
         axios.defaults.headers.common['Authorization'] = `Token ${account.token}`;
-        axios.post(`${configData.API_SERVER}enrollments/confirm_bulk_enrollment/`, {
-            course_id: activeCourse.id,
-            student_ids: existingStudentIds,
-            students_to_create: studentsToCreate,
-            students_to_update: studentsToUpdate
-        })
-            .then(response => {
-                const { enrolled_count, created_users_count, reused_users_count, updated_users_count, skipped } = response.data;
-                const parts = [
-                    `Inscritos: ${enrolled_count}`,
-                    `Nuevos usuarios: ${created_users_count || 0}`,
-                    `Reutilizados: ${reused_users_count || 0}`,
-                ];
-                if (updated_users_count) {
-                    parts.push(`RU/observaciones completados: ${updated_users_count}`);
-                }
-                if (skipped && skipped.length > 0) {
-                    parts.push(`Omitidos (ya inscritos): ${skipped.length}`);
-                }
-                setSnackbar({ open: true, message: `Proceso finalizado. ${parts.join('. ')}.`, severity: 'success' });
-                setPreviewOpen(false);
-                fetchEnrollments();
-            })
-            .catch(err => {
-                setSnackbar({ open: true, message: 'Error al confirmar inscripción', severity: 'error' });
-            })
-            .finally(() => {
-                setConfirmLoading(false);
+
+        const totals = { enrolled: 0, created: 0, reused: 0, updated: 0, skipped: 0 };
+        const failures = [];
+        let done = 0;
+
+        for (const chunk of chunks) {
+            const size = (chunk.student_ids?.length || 0)
+                + (chunk.students_to_create?.length || 0)
+                + (chunk.students_to_update?.length || 0);
+            try {
+                const { data } = await axios.post(`${configData.API_SERVER}enrollments/confirm_bulk_enrollment/`, {
+                    course_id: activeCourse.id,
+                    student_ids: chunk.student_ids || [],
+                    students_to_create: chunk.students_to_create || [],
+                    students_to_update: chunk.students_to_update || []
+                });
+                totals.enrolled += data.enrolled_count || 0;
+                totals.created += data.created_users_count || 0;
+                totals.reused += data.reused_users_count || 0;
+                totals.updated += data.updated_users_count || 0;
+                totals.skipped += (data.skipped || []).length;
+            } catch (err) {
+                // Un lote caído no debe tumbar los demás: los que ya pasaron
+                // están guardados y volver a confirmar no duplica a nadie.
+                failures.push(describeError(err));
+            }
+            done += size;
+            setConfirmProgress({ done, total });
+        }
+
+        setConfirmLoading(false);
+
+        const parts = [
+            `Inscritos: ${totals.enrolled}`,
+            `Nuevos usuarios: ${totals.created}`,
+            `Reutilizados: ${totals.reused}`,
+        ];
+        if (totals.updated) {
+            parts.push(`RU/observaciones completados: ${totals.updated}`);
+        }
+        if (totals.skipped) {
+            parts.push(`Omitidos (ya inscritos): ${totals.skipped}`);
+        }
+
+        fetchEnrollments();
+
+        if (failures.length > 0) {
+            // La ventana se queda abierta a propósito: basta con volver a
+            // confirmar para reintentar solo lo que faltó.
+            setSnackbar({
+                open: true,
+                message: `${failures.length} de ${chunks.length} lotes fallaron (${failures[0]}). ${parts.join('. ')}. Vuelva a confirmar para reintentar.`,
+                severity: 'error'
             });
+            return;
+        }
+
+        setSnackbar({ open: true, message: `Proceso finalizado. ${parts.join('. ')}.`, severity: 'success' });
+        setPreviewOpen(false);
     };
 
     const handleCheckSingleCI = (ci, index) => {
@@ -1105,6 +1173,18 @@ const Enrollments = () => {
                         )}
                     </Box>
 
+                    {confirmLoading && (
+                        <Box mt={2}>
+                            <LinearProgress
+                                variant="determinate"
+                                value={confirmProgress.total ? (confirmProgress.done / confirmProgress.total) * 100 : 0}
+                            />
+                            <Typography variant="caption" color="textSecondary">
+                                Procesando {confirmProgress.done} de {confirmProgress.total} estudiantes...
+                            </Typography>
+                        </Box>
+                    )}
+
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setPreviewOpen(false)} color="primary" disabled={confirmLoading}>
@@ -1120,7 +1200,9 @@ const Enrollments = () => {
                             (!previewData.to_create || previewData.to_create.length === 0))
                         }
                     >
-                        {confirmLoading ? 'Procesando...' : 'Confirmar y Procesar'}
+                        {confirmLoading
+                            ? `Procesando ${confirmProgress.done}/${confirmProgress.total}...`
+                            : 'Confirmar y Procesar'}
                     </Button>
                 </DialogActions>
             </Dialog>
