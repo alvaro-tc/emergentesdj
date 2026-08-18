@@ -19,12 +19,18 @@ const QmdEditor = lazy(() => import('./presentation/QmdEditor'));
 // Reveal + KaTeX + highlight.js: todo el peso del deck, solo para previsualizar.
 const DeckPreview = lazy(() => import('./presentation/DeckPreview'));
 
-/** Los cuatro overrides de color: título y subtítulo, por cada paleta. */
+/**
+ * Los cuatro overrides de color: título y subtítulo, por cada paleta.
+ *
+ * El orden importa: se pintan en dos columnas y tienen que caer bajo la
+ * pastilla de su paleta —claro a la izquierda, oscuro a la derecha—, en el
+ * mismo orden que `PALETTE_LABELS`. Cruzarlos hace elegir el color equivocado.
+ */
 const COLOR_FIELDS = [
-    { field: 'heading_color_dark', label: 'Título · oscuro', palette: 'dark' },
     { field: 'heading_color_light', label: 'Título · claro', palette: 'light' },
-    { field: 'subheading_color_dark', label: 'Subtítulo · oscuro', palette: 'dark' },
-    { field: 'subheading_color_light', label: 'Subtítulo · claro', palette: 'light' }
+    { field: 'heading_color_dark', label: 'Título · oscuro', palette: 'dark' },
+    { field: 'subheading_color_light', label: 'Subtítulo · claro', palette: 'light' },
+    { field: 'subheading_color_dark', label: 'Subtítulo · oscuro', palette: 'dark' }
 ];
 
 const PLACEHOLDER_CONTENT = `# Tema de la clase
@@ -330,8 +336,21 @@ const PresentationForm = () => {
                 </Card>
             </Grid>
 
-            {/* Left column: fields */}
-            <Grid size={{ xs: 12, lg: 4 }}>
+            {/* Columna izquierda: vista previa arriba y datos debajo. El ancho
+                se lo lleva el editor, que es donde se trabaja. */}
+            <Grid size={{ xs: 12, md: 4 }}>
+                <Card sx={{ mb: 3 }}>
+                    <CardContent>
+                        <Suspense fallback={
+                            <Box sx={{ aspectRatio: '16 / 9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CircularProgress />
+                            </Box>
+                        }>
+                            <DeckPreview presentation={form} />
+                        </Suspense>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardContent>
                         <Typography variant="h5" fontWeight={600} gutterBottom>Datos de la Presentación</Typography>
@@ -421,7 +440,7 @@ const PresentationForm = () => {
                                         const sample = t.palettes[form.palette] || t.palettes[DEFAULT_PALETTE];
                                         const selected = form.theme === t.id;
                                         return (
-                                            <Grid size={6} key={t.id}>
+                                            <Grid size={3} key={t.id}>
                                                 <Tooltip title={t.description}>
                                                     <Box
                                                         onClick={() => setForm(f => ({ ...f, theme: t.id }))}
@@ -438,11 +457,15 @@ const PresentationForm = () => {
                                                         }}
                                                     >
                                                         <Typography
-                                                            sx={{ color: sample.heading, fontSize: '0.78rem', fontWeight: 700, lineHeight: 1.2 }}
+                                                            sx={{
+                                                                color: sample.heading, fontSize: '0.68rem', fontWeight: 700,
+                                                                lineHeight: 1.2, whiteSpace: 'nowrap',
+                                                                overflow: 'hidden', textOverflow: 'ellipsis'
+                                                            }}
                                                         >
                                                             {t.label}
                                                         </Typography>
-                                                        <Typography sx={{ color: sample.subheading, fontSize: '0.6rem' }}>
+                                                        <Typography sx={{ color: sample.subheading, fontSize: '0.55rem' }}>
                                                             Subtítulo
                                                         </Typography>
                                                         <Box sx={{ display: 'flex', gap: 0.4, mt: 0.6 }}>
@@ -534,22 +557,30 @@ const PresentationForm = () => {
                 </Card>
             </Grid>
 
-            {/* Right column: vista previa + editor .qmd */}
-            <Grid size={{ xs: 12, lg: 8 }}>
-                <Card sx={{ mb: 3 }}>
-                    <CardContent>
-                        <Suspense fallback={
-                            <Box sx={{ aspectRatio: '16 / 9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CircularProgress />
-                            </Box>
-                        }>
-                            <DeckPreview presentation={form} />
-                        </Suspense>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent>
+            {/* Editor .qmd. La tarjeta se queda pegada a la ventana: la columna
+                izquierda es más larga, y sin esto el editor se iba hacia arriba
+                con el scroll y se llevaba la barra de plantillas. */}
+            <Grid size={{ xs: 12, md: 8 }}>
+                <Card
+                    sx={{
+                        position: { md: 'sticky' },
+                        top: 16,
+                        // Alto definido y contenido en columna flexible: el
+                        // desplazamiento vive dentro de CodeMirror, no en la
+                        // página, así que la barra de plantillas no se mueve.
+                        height: { md: 'calc(100vh - 120px)' },
+                        display: 'flex',
+                        flexDirection: 'column',
+                        // La tarjeta tiene que caber holgadamente en la ventana.
+                        // Si mide casi lo mismo que la pantalla, al llegar al
+                        // final de la columna izquierda el anclaje se agota y la
+                        // empuja hacia arriba con la barra de plantillas dentro.
+                        // `Card` además trae `overflow: hidden`, que anula el
+                        // `position: sticky` de esa barra.
+                        overflow: 'visible'
+                    }}
+                >
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                             <Typography variant="h5" fontWeight={600}>Contenido (Quarto)</Typography>
                             <Chip
@@ -565,10 +596,13 @@ const PresentationForm = () => {
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                         <Suspense fallback={<Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>}>
-                            <QmdEditor
-                                value={form.content}
-                                onChange={(content) => setForm(f => ({ ...f, content }))}
-                            />
+                            <Box sx={{ flex: 1, minHeight: { xs: 460, md: 0 } }}>
+                                <QmdEditor
+                                    value={form.content}
+                                    onChange={(content) => setForm(f => ({ ...f, content }))}
+                                    fill
+                                />
+                            </Box>
                         </Suspense>
                     </CardContent>
                 </Card>

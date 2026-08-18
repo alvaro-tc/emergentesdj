@@ -522,7 +522,8 @@ const Enrollments = () => {
                         email,
                         `${ci}*Bo`,
                         courseIdentifier,
-                        'Student'
+                        // En minúsculas: es el shortname del rol en Moodle.
+                        'student'
                     ].map(escape).join(';');
                 });
 

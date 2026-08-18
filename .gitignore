@@ -129,3 +129,4 @@ coverage/
 # Claude
 package.json
 package-lock.json
+CLAUDE.md

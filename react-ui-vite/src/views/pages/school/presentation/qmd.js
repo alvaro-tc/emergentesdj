@@ -216,10 +216,53 @@ export const createRenderer = () => {
     return md;
 };
 
+/**
+ * Atributos de fondo de Quarto. En Reveal no viven en el encabezado sino en la
+ * `<section>`, como `data-background-*`, y de ahí sale el fondo a sangre.
+ */
+const BACKGROUND_KEYS = [
+    'background-image', 'background-color', 'background-size',
+    'background-position', 'background-repeat', 'background-opacity',
+    'background-video', 'background-iframe'
+];
+
+const HEADING_ATTRS_RE = /\{([^}]*)\}\s*$/;
+
+/**
+ * Saca del encabezado los `background-*` y los devuelve como atributos de la
+ * diapositiva. Lo demás (`{.inverse}`, etc.) se deja intacto para que
+ * `markdown-it-attrs` siga aplicándolo al encabezado.
+ */
+const extractBackground = (markdown) => {
+    const lines = markdown.split('\n');
+    const match = HEADING_ATTRS_RE.exec(lines[0] || '');
+    if (!match) return { markdown, attrs: '' };
+
+    const found = [];
+    const rest = match[1].replace(/([\w-]+)\s*=\s*"([^"]*)"/g, (all, key, value) => {
+        if (!BACKGROUND_KEYS.includes(key)) return all;
+        found.push(` data-${key}="${escapeHtml(value)}"`);
+        return '';
+    });
+    if (!found.length) return { markdown, attrs: '' };
+
+    const kept = rest.trim();
+    lines[0] = lines[0].slice(0, match.index) + (kept ? `{${kept}}` : '');
+    return { markdown: lines.join('\n'), attrs: found.join('') };
+};
+
 /** Envuelve el markdown de una diapositiva en su `<section>`. */
 export const renderSlide = (md, slide) => {
-    const className = slide.type === 'section' ? ' class="quarto-section"' : '';
-    return `<section${className}>\n${md.render(slide.markdown)}\n</section>`;
+    const { markdown, attrs } = extractBackground(slide.markdown);
+    const body = md.render(markdown);
+
+    // El cuerpo de una sección va en su propia caja: así se centra en vertical
+    // desde el CSS sin tocar el `display` de la `<section>`, que es de Reveal
+    // y decide qué diapositiva se ve.
+    if (slide.type === 'section') {
+        return `<section class="quarto-section"${attrs}>\n<div class="section-body">\n${body}</div>\n</section>`;
+    }
+    return `<section${attrs}>\n${body}\n</section>`;
 };
 
 /**

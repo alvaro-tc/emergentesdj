@@ -367,13 +367,32 @@
     border-bottom: 2px solid var(--q-rule);
   }
 
-  /* Diapositiva de sección: sin filete, todo centrado. */
+  /* Diapositiva de sección: sin filete y centrada en los dos ejes.
+     El centrado vertical se hace desde `.section-body`, que es un hijo
+     absoluto, y no con `display: flex` en la propia `<section>`: ese `display`
+     es de Reveal y decide qué diapositiva se ve. */
   section.quarto-section {
     text-align: center;
+    height: 100%;
 
-    > h1 {
+    .section-body {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      transform: translateY(-50%);
+    }
+
+    > .section-body > h1 {
       border-bottom: none;
       margin-bottom: 0.3em;
+    }
+
+    /* `# {background-image="…"}` deja el encabezado vacío: la diapositiva es
+       la imagen a sangre y un título en blanco solo estorbaría. */
+    h1:empty {
+      display: none;
+      margin: 0;
     }
   }
 
@@ -698,14 +717,18 @@
 }
 
 /* ── Portada ────────────────────────────────────────────────────────────── */
-/* Bloque centrado horizontalmente y anclado arriba: logo, título, subtítulo y
-   autor en ese orden, sin repartir el espacio sobrante entre ellos. */
-/* Se cualifica con `.slides section` para ganarle en especificidad al
-   `text-align: left` de la base, que si no alinea la portada a la izquierda.
-   El logo se ancla arriba y el texto a media diapositiva: así el título cae
-   siempre a la misma altura, sea cual sea lo alto que sea el logo. */
+/* Logo anclado arriba y texto a media diapositiva, todo centrado en horizontal:
+   así el título cae siempre a la misma altura, sea cual sea lo alto que sea el
+   logo. Se cualifica con `.slides section` para ganarle en especificidad al
+   `text-align: left` de la base.
+
+   NUNCA tocar aquí `position` ni `display`: Reveal posiciona cada `<section>`
+   en absoluto sin fijarle `top`, así que cada diapositiva se dibuja en su
+   posición estática. Sacar una del posicionamiento absoluto la mete en el flujo
+   y desplaza a las vecinas que estén montadas (las que caen dentro de
+   `viewDistance`) fuera de la pantalla. La sección ya está posicionada por
+   Reveal, que es todo lo que necesitan los hijos absolutos de abajo. */
 .reveal .slides section.quarto-cover {
-  position: relative;
   height: 100%;
   text-align: center;
 
